@@ -18,6 +18,7 @@
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 
+#include "../lib/openvr/headers/openvr.h"
 // --------------------------------------------------------------------------------------------------------
 // FREESPACE DEFINES/VARS
 //
