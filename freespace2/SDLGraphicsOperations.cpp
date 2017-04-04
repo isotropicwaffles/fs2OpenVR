@@ -157,7 +157,7 @@ std::unique_ptr<os::Viewport> SDLGraphicsOperations::createViewport(const os::Vi
 		windowflags |= SDL_WINDOW_BORDERLESS;
 	}
 	if (props.flags[os::ViewPortFlags::Fullscreen]) {
-		windowflags |= SDL_WINDOW_FULLSCREEN;
+		//windowflags |= SDL_WINDOW_FULLSCREEN;
 	}
 	if (props.flags[os::ViewPortFlags::Resizeable]) {
 		windowflags |= SDL_WINDOW_RESIZABLE;

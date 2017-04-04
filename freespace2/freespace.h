@@ -19,6 +19,8 @@
 #include "graphics/2d.h"
 
 #include "../lib/openvr/headers/openvr.h"
+#include "../lib/openvr/shared/Matrices.h"
+#include "../lib/openvr/shared/Vectors.h"
 // --------------------------------------------------------------------------------------------------------
 // FREESPACE DEFINES/VARS
 //
@@ -99,6 +101,11 @@ int game_start_mission();
 // shutdown a mission
 void game_level_close();
 
+//VR initialization
+int vr_init();
+
+//VR
+void UpdateHMDMatrixPose();
 
 // gameplay stuff -----------------------------------------------------
 
