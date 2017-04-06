@@ -7,6 +7,16 @@ SET(FREESPACE_SRC freespace.cpp
 				SDLGraphicsOperations.cpp
 				SDLGraphicsOperations.h)
 
+
+
+#ADD_EXECUTABLE(VR ${EXE_GUI_TYPE} ${VR_SRC})
+
+
+
+## OpenVR API path
+
+
+
 IF(FSO_BUILD_PACKAGE)
 	IF(FSO_INSTRUCTION_SET STREQUAL "SSE2" OR FSO_INSTRUCTION_SET STREQUAL "AVX")
 		SET(FSO_INSTALLER_ICON "${CMAKE_CURRENT_SOURCE_DIR}/V_sse.ico" CACHE FILEPATH "The path of the installer icon")
@@ -29,6 +39,9 @@ TARGET_LINK_LIBRARIES(Freespace2 code)
 TARGET_LINK_LIBRARIES(Freespace2 platform)
 TARGET_LINK_LIBRARIES(Freespace2 compiler)
 
+
+#TARGET_LINK_LIBRARIES(Freespace2 IVR)
+
 IF(WIN32)
 	# Link sdl main only here as it interferes with fred
 	TARGET_LINK_LIBRARIES(Freespace2 sdlmain)
@@ -40,6 +53,7 @@ ENDIF(FSO_USE_VOICEREC)
 
 INCLUDE_DIRECTORIES(${FREESPACE_HEADERS})
 INCLUDE_DIRECTORIES(${GENERATED_SOURCE_DIR})
+
 
 IF(USE_STLPORT)
 	INCLUDE_DIRECTORIES(BEFORE SYSTEM ${STLPORT_INCLUDE_DIRS})
@@ -80,45 +94,4 @@ set_target_properties(Freespace2 PROPERTIES XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGI
 set_target_properties(Freespace2 PROPERTIES XCODE_ATTRIBUTE_COPY_PHASE_STRIP[variant=Debug] "NO")
 set_target_properties(Freespace2 PROPERTIES XCODE_ATTRIBUTE_STRIP_INSTALLED_PRODUCT[variant=Debug] "NO")
 set_target_properties(Freespace2 PROPERTIES XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN[variant=Debug] "NO")
-
-
-## OpenVR API path
-
-
-# If not set, determines the running platform architecture.
-if(NOT PLATFORM)
-  if(CMAKE_SIZEOF_VOID_P MATCHES 8)
-    set(PLATFORM 64)
-  else()
-    set(PLATFORM 32)
-  endif()
-endif()
-
-  # Binaries path for thirdparties are not generics so we try to guess their suffixes.
-  set(WINDOWS_PATH_SUFFIXES win${PLATFORM} Win${PLATFORM} x${PLATFORM})
-
-
-find_library(OPENVR_LIBRARIES
-  NAMES
-    openvr_api
-  PATHS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/openvr/bin
-    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/openvr/lib
-  PATH_SUFFIXES
-    osx32
-    linux64
-    ${WINDOWS_PATH_SUFFIXES}
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-)
-set(OPENVR_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib/openvr/headers)
-
-message(STATUS "THIS IS THE CURRENT DIRECTORY: ${CMAKE_CURRENT_SOURCE_DIR}")
-
-
-include_directories(
-  ${OPENVR_INCLUDE_DIR}
-)
-
-TARGET_LINK_LIBRARIES(Freespace2 ${OPENVR_LIBRARIES})
 

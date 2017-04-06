@@ -177,33 +177,6 @@
 
 extern int Om_tracker_flag; // needed for FS2OpenPXO config
 
-//ADDITION: Here are some vr variables that need to be accessable to multiple functions
-vr::IVRSystem *m_pHMD;
-vr::IVRRenderModels *m_pRenderModels;
-
-std::string m_strDriver = "No Driver";
-std::string m_strDisplay = "No Display";
-
-vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
-Matrix4 m_rmat4DevicePose[vr::k_unMaxTrackedDeviceCount];
-bool m_rbShowTrackedDevice[vr::k_unMaxTrackedDeviceCount];
-
-Matrix4 m_mat4HMDPose;
-Matrix4 m_mat4eyePosLeft;
-Matrix4 m_mat4eyePosRight;
-
-Matrix4 m_mat4ProjectionCenter;
-Matrix4 m_mat4ProjectionLeft;
-Matrix4 m_mat4ProjectionRight;
-
-
-std::string m_strPoseClasses;                            // what classes we saw poses for this frame
-
-int m_iValidPoseCount;
-int m_iValidPoseCount_Last;
-
-char m_rDevClassChar[vr::k_unMaxTrackedDeviceCount];   // for each device, a character representing its class
-
 
 #ifdef WIN32
 // According to AMD and NV, these _should_ force their drivers into high-performance mode
@@ -239,6 +212,8 @@ void multi_spew_pxo_checksums(int max_files, const char *outfile);
 void fs2netd_spew_table_checksums(const char *outfile);
 
 extern bool frame_rate_display;
+iVr* VROBJ = new iVr();
+
 
 void game_reset_view_clip();
 void game_reset_shade_frame();
@@ -249,6 +224,7 @@ void game_reset_time();
 void game_show_framerate();			// draws framerate in lower right corner
 
 int Game_no_clear = 0;
+
 
 typedef struct big_expl_flash {
 	float max_flash_intensity;	// max intensity
@@ -1930,7 +1906,6 @@ void game_init()
 	key_init();
 	mouse_init();
 	gamesnd_parse_soundstbl();
-	vr_init();
 	gameseq_init();
 
 	multi_init();	
@@ -2020,6 +1995,9 @@ void game_init()
 	io::mouse::CursorManager::get()->showCursor(true);
 
 	mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
+
+	//Initialize VR
+	VROBJ->VR_Init();
 }
 
 char transfer_text[128];
@@ -4141,8 +4119,6 @@ void game_frame(bool paused)
 
 			game_render_frame( cid );
 			
-			UpdateHMDMatrixPose();
-
 
 			//Cutscene bars
 			clip_frame_view();
@@ -6652,122 +6628,7 @@ DCF(pofspew, "Spews POF info without shutting down the game")
 }
 
 
-//VR WORK GOES HERE
-//-----------------------------------------------------------------------------
-// Purpose: Helper to get a string from a tracked device property and turn it
-//			into a std::string
-//-----------------------------------------------------------------------------
-std::string GetTrackedDeviceString(vr::IVRSystem *pHmd, vr::TrackedDeviceIndex_t unDevice, vr::TrackedDeviceProperty prop, vr::TrackedPropertyError *peError = NULL)
-{
-	uint32_t unRequiredBufferLen = pHmd->GetStringTrackedDeviceProperty(unDevice, prop, NULL, 0, peError);
-	if (unRequiredBufferLen == 0)
-		return "";
 
-	char *pchBuffer = new char[unRequiredBufferLen];
-	unRequiredBufferLen = pHmd->GetStringTrackedDeviceProperty(unDevice, prop, pchBuffer, unRequiredBufferLen, peError);
-	std::string sResult = pchBuffer;
-	delete[] pchBuffer;
-	return sResult;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Converts a SteamVR matrix to our local matrix class
-//-----------------------------------------------------------------------------
-Matrix4 ConvertSteamVRMatrixToMatrix4(const vr::HmdMatrix34_t &matPose)
-{
-	Matrix4 matrixObj(
-		matPose.m[0][0], matPose.m[1][0], matPose.m[2][0], 0.0,
-		matPose.m[0][1], matPose.m[1][1], matPose.m[2][1], 0.0,
-		matPose.m[0][2], matPose.m[1][2], matPose.m[2][2], 0.0,
-		matPose.m[0][3], matPose.m[1][3], matPose.m[2][3], 1.0f
-	);
-	return matrixObj;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-void UpdateHMDMatrixPose()
-{
-	if (!m_pHMD)
-		return;
-
-	vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0);
-
-	m_iValidPoseCount = 0;
-	m_strPoseClasses = "";
-	for (int nDevice = 0; nDevice < vr::k_unMaxTrackedDeviceCount; ++nDevice)
-	{
-		if (m_rTrackedDevicePose[nDevice].bPoseIsValid)
-		{
-			m_iValidPoseCount++;
-			m_rmat4DevicePose[nDevice] = ConvertSteamVRMatrixToMatrix4(m_rTrackedDevicePose[nDevice].mDeviceToAbsoluteTracking);
-			if (m_rDevClassChar[nDevice] == 0)
-			{
-				switch (m_pHMD->GetTrackedDeviceClass(nDevice))
-				{
-				case vr::TrackedDeviceClass_Controller:        m_rDevClassChar[nDevice] = 'C'; break;
-				case vr::TrackedDeviceClass_HMD:               m_rDevClassChar[nDevice] = 'H'; break;
-				case vr::TrackedDeviceClass_Invalid:           m_rDevClassChar[nDevice] = 'I'; break;
-				case vr::TrackedDeviceClass_GenericTracker:    m_rDevClassChar[nDevice] = 'G'; break;
-				case vr::TrackedDeviceClass_TrackingReference: m_rDevClassChar[nDevice] = 'T'; break;
-				default:                                       m_rDevClassChar[nDevice] = '?'; break;
-				}
-			}
-			m_strPoseClasses += m_rDevClassChar[nDevice];
-		}
-	}
-
-	if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
-	{
-		m_mat4HMDPose = m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd];
-		m_mat4HMDPose.invert();
-	}
-}
-
-
-
-int vr_init()
-{
-
-//Let's try to initialize the headset
-// Loading the SteamVR Runtime
-vr::EVRInitError eError = vr::VRInitError_None;
-m_pHMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
-
-if (eError != vr::VRInitError_None)
-{
-	m_pHMD = NULL;
-	char buf[1024];
-	sprintf_s(buf, sizeof(buf), "Unable to init VR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VR_Init Failed", buf, NULL);
-	return 1;
-}
-
-m_pRenderModels = (vr::IVRRenderModels *)vr::VR_GetGenericInterface(vr::IVRRenderModels_Version, &eError);
-
-
-if (!m_pRenderModels)
-{
-	m_pHMD = NULL;
-	vr::VR_Shutdown();
-
-	char buf[1024];
-	sprintf_s(buf, sizeof(buf), "Unable to get render model interface: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "VR_Init Failed", buf, NULL);
-	return 1;
-}
-
-
-m_strDriver = "No Driver";
-m_strDisplay = "No Display";
-
-m_strDriver = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String);
-m_strDisplay = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String);
-
-return 0;
-}
 
 
 /**

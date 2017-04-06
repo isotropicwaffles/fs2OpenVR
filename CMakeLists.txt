@@ -140,8 +140,10 @@ ADD_SUBDIRECTORY(tools)
 ADD_SUBDIRECTORY(lib)
 
 ADD_SUBDIRECTORY(code)
+ADD_SUBDIRECTORY(vr)
 
 ADD_SUBDIRECTORY(freespace2)
+
 
 IF(FSO_BUILD_FRED2)
 	ADD_SUBDIRECTORY(fred2)
@@ -174,6 +176,11 @@ include(package)
 
 include(doxygen)
 
+#file(GLOB VR_INCLUDES vr/*.h)
+#file(GLOB VR_SOURCES vr/*.cpp)
+
+#source_group("vr" FILES ${VR_INCLUDES})
+#source_group("vr" FILES ${VR_SOURCES})
 # Print used options to log
 IF (WIN32)
 	message(STATUS "Building FRED2: ${FSO_BUILD_FRED2}")
