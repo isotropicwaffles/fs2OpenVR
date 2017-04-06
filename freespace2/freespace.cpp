@@ -166,6 +166,7 @@
 #include "weapon/shockwave.h"
 #include "weapon/weapon.h"
 #include "tracing/Monitor.h"
+#include "../vr/Vr.h"
 
 #include "SDLGraphicsOperations.h"
 

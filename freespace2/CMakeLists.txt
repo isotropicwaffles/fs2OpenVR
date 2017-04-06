@@ -40,7 +40,9 @@ TARGET_LINK_LIBRARIES(Freespace2 platform)
 TARGET_LINK_LIBRARIES(Freespace2 compiler)
 
 
-#TARGET_LINK_LIBRARIES(Freespace2 IVR)
+TARGET_LINK_LIBRARIES(Freespace2 ${IVR})
+TARGET_LINK_LIBRARIES(Freespace2 ${OPENVR_LIBRARIES})
+
 
 IF(WIN32)
 	# Link sdl main only here as it interferes with fred

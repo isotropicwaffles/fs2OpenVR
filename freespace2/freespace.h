@@ -17,7 +17,6 @@
 #include "globalincs/pstypes.h"
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
-#include "../vr/Vr.h"
 
 
 // --------------------------------------------------------------------------------------------------------
