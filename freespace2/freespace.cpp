@@ -166,7 +166,7 @@
 #include "weapon/shockwave.h"
 #include "weapon/weapon.h"
 #include "tracing/Monitor.h"
-#include "../vr/Vr.h"
+#include "Vr.h"
 
 #include "SDLGraphicsOperations.h"
 
@@ -6799,7 +6799,7 @@ void game_launch_launcher_on_exit()
 void game_shutdown(void)
 {
 	headtracking::shutdown();
-
+	VROBJ->VR_Shutdown();
 	fsspeech_deinit();
 #ifdef FS2_VOICER
 	if(Cmdline_voice_recognition)
