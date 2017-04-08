@@ -215,6 +215,8 @@ void fs2netd_spew_table_checksums(const char *outfile);
 extern bool frame_rate_display;
 iVr* VROBJ = new iVr();
 
+matrix hmd_orientation1;
+matrix invert_hmd_orientation1;
 
 void game_reset_view_clip();
 void game_reset_shade_frame();
@@ -1660,8 +1662,8 @@ void game_init()
 	// Moved from rand32, if we're gonna break, break immediately.
 	Assert(RAND_MAX == 0x7fff || RAND_MAX >= 0x7ffffffd);
 	// seed the random number generator
-	int game_init_seed = (int) time(NULL);
-	srand( game_init_seed );
+	int game_init_seed = (int)time(NULL);
+	srand(game_init_seed);
 
 	Framerate_delay = 0;
 
@@ -1674,14 +1676,14 @@ void game_init()
 
 	// Initialize the timer before the os
 	timer_init();
-	
+
 #ifndef NDEBUG
 	outwnd_init();
 #endif
 
 	// init os stuff next
-	if ( !Is_standalone ) {		
-		os_init( Osreg_class_name, Osreg_app_name );
+	if (!Is_standalone) {
+		os_init(Osreg_class_name, Osreg_app_name);
 	}
 	else {
 		std_init_os();
@@ -1696,7 +1698,7 @@ void game_init()
 
 	memset(whee, 0, sizeof(whee));
 
-	_getcwd(whee, MAX_PATH_LEN-1);
+	_getcwd(whee, MAX_PATH_LEN - 1);
 
 	strcat_s(whee, DIR_SEPARATOR_STR);
 	strcat_s(whee, EXE_FNAME);
@@ -1704,14 +1706,14 @@ void game_init()
 	//Initialize the libraries
 	s1 = timer_get_milliseconds();
 
-	if ( cfile_init(whee, NULL) ) {			// initialize before calling any cfopen stuff!!!
+	if (cfile_init(whee, NULL)) {			// initialize before calling any cfopen stuff!!!
 		exit(1);
 	}
 
 	e1 = timer_get_milliseconds();
 
 	// initialize localization module. Make sure this is done AFTER initialzing OS.
-	lcl_init( detect_lang() );	
+	lcl_init(detect_lang());
 	lcl_xstr_init();
 
 	mod_table_init();		// load in all the mod dependent settings
@@ -1736,56 +1738,57 @@ void game_init()
 
 
 	Use_joy_mouse = 0;
-	Use_low_mem = os_config_read_uint( NULL, NOX("LowMem"), 0 );
+	Use_low_mem = os_config_read_uint(NULL, NOX("LowMem"), 0);
 
 #ifndef NDEBUG
-	Use_fullscreen_at_startup = os_config_read_uint( NULL, NOX("ForceFullscreen"), 1 );
+	Use_fullscreen_at_startup = os_config_read_uint(NULL, NOX("ForceFullscreen"), 1);
 #endif
 
 	// change FPS cap if told to do so (for those who can't use vsync or where vsync isn't enough)
 	uint max_fps = 0;
-	if ( (max_fps = os_config_read_uint(NULL, NOX("MaxFPS"), 0)) != 0 ) {
-		if ( (max_fps > 15) && (max_fps < 120) ) {
+	if ((max_fps = os_config_read_uint(NULL, NOX("MaxFPS"), 0)) != 0) {
+		if ((max_fps > 15) && (max_fps < 120)) {
 			Framerate_cap = (int)max_fps;
 		}
 	}
 
-	Asteroids_enabled = 1;		
+	Asteroids_enabled = 1;
 
-/////////////////////////////
-// SOUND INIT START
-/////////////////////////////
+	/////////////////////////////
+	// SOUND INIT START
+	/////////////////////////////
 
-	if ( !Is_standalone ) {
+	if (!Is_standalone) {
 		snd_init();
 	}
 
-	if(fsspeech_init() == false) {
+	if (fsspeech_init() == false) {
 		mprintf(("Failed to init speech\n"));
 
-		if(Cmdline_query_speech)
+		if (Cmdline_query_speech)
 		{
 			if (!fsspeech_was_compiled())
 				os::dialogs::Message(os::dialogs::MESSAGEBOX_WARNING, "Speech is not compiled in this build in code.lib");
 			else
 				os::dialogs::Message(os::dialogs::MESSAGEBOX_WARNING, "Speech is compiled, but failed to init");
 		}
-	} else if(Cmdline_query_speech) {
+	}
+	else if (Cmdline_query_speech) {
 		// Its bad practice to use a negative type, this is an exceptional case
-		fsspeech_play(-1,"Welcome to FS2 open");
+		fsspeech_play(-1, "Welcome to FS2 open");
 		os::dialogs::Message(os::dialogs::MESSAGEBOX_INFORMATION, "Speech is compiled and initialised and should be working");
 	}
 
-/////////////////////////////
-// SOUND INIT END
-/////////////////////////////
+	/////////////////////////////
+	// SOUND INIT END
+	/////////////////////////////
 
 	std::unique_ptr<SDLGraphicsOperations> sdlGraphicsOperations;
 	if (!Is_standalone) {
 		// Standalone mode doesn't require graphics operations
 		sdlGraphicsOperations.reset(new SDLGraphicsOperations());
 	}
-	if ( gr_init(std::move(sdlGraphicsOperations)) == false ) {
+	if (gr_init(std::move(sdlGraphicsOperations)) == false) {
 		os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, "Error intializing graphics!");
 		exit(1);
 		return;
@@ -1800,23 +1803,24 @@ void game_init()
 	// This needs to happen after graphics initialization
 	tracing::init();
 
-// Karajorma - Moved here from the sound init code cause otherwise windows complains
+	// Karajorma - Moved here from the sound init code cause otherwise windows complains
 #ifdef FS2_VOICER
-	if(Cmdline_voice_recognition)
+	if (Cmdline_voice_recognition)
 	{
 		SDL_SysWMinfo info;
 		SDL_VERSION(&info.version); // initialize info structure with SDL version info
 
 		bool voiceRectOn = false;
-		if(SDL_GetWindowWMInfo(os::getSDLMainWindow(), &info)) { // the call returns true on success
+		if (SDL_GetWindowWMInfo(os::getSDLMainWindow(), &info)) { // the call returns true on success
 			// success
 			voiceRectOn = VOICEREC_init(info.info.win.window, WM_RECOEVENT, GRAMMARID1, IDR_CMD_CFG);
-		} else {
-			// call failed
-			mprintf(( "Couldn't get window information: %s\n", SDL_GetError() ));
 		}
-	
-		if(voiceRectOn == false)
+		else {
+			// call failed
+			mprintf(("Couldn't get window information: %s\n", SDL_GetError()));
+		}
+
+		if (voiceRectOn == false)
 		{
 			os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, "Failed to init voice rec!");
 		}
@@ -1831,55 +1835,59 @@ void game_init()
 	script_init();			//WMC
 
 	font::init();					// loads up all fonts
-	
+
 	// add title screen
-	if(!Is_standalone){
+	if (!Is_standalone) {
 		// #Kazan# - moved this down - WATCH THESE calls - anything that shares code between standalone and normal
 		// cannot make gr_* calls in standalone mode because all gr_ calls are NULL pointers
 		gr_set_gamma(FreeSpace_gamma);
 		game_title_screen_display();
 	}
-	
+
 	// attempt to load up master tracker registry info (login and password)
-	Multi_tracker_id = -1;		
+	Multi_tracker_id = -1;
 
 	// should we be using this or not?
-	Om_tracker_flag = os_config_read_uint( "PXO", "FS2OpenPXO" , 0 );
+	Om_tracker_flag = os_config_read_uint("PXO", "FS2OpenPXO", 0);
 	// pxo login and password
-	ptr = os_config_read_string(NOX("PXO"),NOX("Login"),NULL);
-	if(ptr == NULL){
-		nprintf(("Network","Error reading in PXO login data\n"));
-		strcpy_s(Multi_tracker_login,"");
-	} else {		
-		strcpy_s(Multi_tracker_login,ptr);
+	ptr = os_config_read_string(NOX("PXO"), NOX("Login"), NULL);
+	if (ptr == NULL) {
+		nprintf(("Network", "Error reading in PXO login data\n"));
+		strcpy_s(Multi_tracker_login, "");
 	}
-	ptr = os_config_read_string(NOX("PXO"),NOX("Password"),NULL);
-	if(ptr == NULL){		
-		nprintf(("Network","Error reading PXO password\n"));
-		strcpy_s(Multi_tracker_passwd,"");
-	} else {		
-		strcpy_s(Multi_tracker_passwd,ptr);
-	}	
+	else {
+		strcpy_s(Multi_tracker_login, ptr);
+	}
+	ptr = os_config_read_string(NOX("PXO"), NOX("Password"), NULL);
+	if (ptr == NULL) {
+		nprintf(("Network", "Error reading PXO password\n"));
+		strcpy_s(Multi_tracker_passwd, "");
+	}
+	else {
+		strcpy_s(Multi_tracker_passwd, ptr);
+	}
 
 	// pxo squad name and password
-	ptr = os_config_read_string(NOX("PXO"),NOX("SquadName"),NULL);
-	if(ptr == NULL){
-		nprintf(("Network","Error reading in PXO squad name\n"));
+	ptr = os_config_read_string(NOX("PXO"), NOX("SquadName"), NULL);
+	if (ptr == NULL) {
+		nprintf(("Network", "Error reading in PXO squad name\n"));
 		strcpy_s(Multi_tracker_squad_name, "");
-	} else {		
+	}
+	else {
 		strcpy_s(Multi_tracker_squad_name, ptr);
 	}
 
 	// If less than 48MB of RAM, use low memory model.
 	if (
 #ifdef _WIN32
-		(FreeSpace_total_ram < 48*1024*1024) ||
+	(FreeSpace_total_ram < 48 * 1024 * 1024) ||
 #endif
-		Use_low_mem )	{
-		mprintf(( "Using normal memory settings...\n" ));
+		Use_low_mem) {
+		mprintf(("Using normal memory settings...\n"));
 		bm_set_low_mem(1);		// Use every other frame of bitmaps
-	} else {
-		mprintf(( "Using high memory settings...\n" ));
+	}
+	else {
+		mprintf(("Using high memory settings...\n"));
 		bm_set_low_mem(0);		// Use all frames of bitmaps
 	}
 
@@ -1888,7 +1896,7 @@ void game_init()
 	//as long as it's not being used.
 	//Otherwise, it just keeps the parsed interface.tbl in memory.
 	GUI_system.ParseClassInfo("interface.tbl");
-	
+
 	particle::ParticleManager::init();
 
 	iff_init();						// Goober5000 - this must be done even before species_defs :p
@@ -1909,19 +1917,19 @@ void game_init()
 	gamesnd_parse_soundstbl();
 	gameseq_init();
 
-	multi_init();	
+	multi_init();
 
 	// start up the mission logfile
 	logfile_init(LOGFILE_EVENT_LOG);
-	log_string(LOGFILE_EVENT_LOG,"FS2_Open Mission Log - Opened \n\n", 1);
+	log_string(LOGFILE_EVENT_LOG, "FS2_Open Mission Log - Opened \n\n", 1);
 
 	// standalone's don't use the joystick and it seems to sometimes cause them to not get shutdown properly
-	if(!Is_standalone){
+	if (!Is_standalone) {
 		io::joystick::init();
 	}
 
 	player_controls_init();
-	model_init();	
+	model_init();
 
 	event_music_init();
 
@@ -1929,8 +1937,8 @@ void game_init()
 	// CommanderDJ: try with colors.tbl first, then use the old way if that doesn't work
 	alpha_colors_init();
 
-	obj_init();	
-	mflash_game_init();	
+	obj_init();
+	mflash_game_init();
 	armor_init();
 	ai_init();
 	ai_profiles_init();		// Goober5000
@@ -1938,15 +1946,15 @@ void game_init()
 	glowpoint_init();
 	ship_init();						// read in ships.tbl	
 
-	player_init();	
+	player_init();
 	mission_campaign_init();		// load in the default campaign	
 	anim_init();
-	context_help_init();			
+	context_help_init();
 	techroom_intel_init();			// parse species.tbl, load intel info  
 	hud_positions_init();		//Setup hud positions
-	
+
 	// initialize psnet
-	psnet_init( Multi_options_g.protocol, Multi_options_g.port );						// initialize the networking code		
+	psnet_init(Multi_options_g.protocol, Multi_options_g.port);						// initialize the networking code		
 
 	asteroid_init();
 	mission_brief_common_init();	// Mark all the briefing structures as empty.
@@ -1954,12 +1962,12 @@ void game_init()
 	neb2_init();						// fullneb stuff
 	nebl_init();
 	stars_init();
-	ssm_init();	
+	ssm_init();
 	player_tips_init();				// helpful tips
 	beam_init();
-	
+
 	// load the list of pilot pic filenames (for barracks and pilot select popup quick reference)
-	pilot_load_pic_list();	
+	pilot_load_pic_list();
 	pilot_load_squad_pic_list();
 
 	if (!Is_standalone) {
@@ -1970,7 +1978,7 @@ void game_init()
 		}
 	}
 
-	if(!Cmdline_reparse_mainhall)
+	if (!Cmdline_reparse_mainhall)
 	{
 		main_hall_table_init();
 	}
@@ -1984,7 +1992,7 @@ void game_init()
 
 	// convert old pilot files (if they need it)
 	convert_pilot_files();
-	
+
 	libs::ffmpeg::initialize();
 
 	nprintf(("General", "Ships.tbl is : %s\n", Game_ships_tbl_valid ? "VALID" : "INVALID!!!!"));
@@ -1999,6 +2007,8 @@ void game_init()
 
 	//Initialize VR
 	VROBJ->VR_Init();
+	
+
 }
 
 char transfer_text[128];
@@ -3344,6 +3354,714 @@ camid game_render_frame_setup()
 	return Main_camera;
 }
 
+
+
+
+
+
+
+//VR CAMERA SETUP!!!!!!
+
+
+
+//	Set eye_pos and eye_orient based on view mode.
+camid left_eye_game_render_frame_setup()
+{
+	bool fov_changed;
+
+	if (!LeftEye_camera.isValid())
+	{
+		LeftEye_camera = cam_create("Left Eye camera");
+	}
+	camera *main_cam = LeftEye_camera.getCamera();
+	if (main_cam == NULL)
+	{
+		Error(LOCATION, "Unable to generate Left Eye camera");
+		return camid();
+	}
+
+	vec3d	eye_pos;
+	matrix	eye_orient = vmd_identity_matrix;
+	vec3d	tmp_dir;
+
+	static int last_Viewer_mode = 0;
+	static int last_Game_mode = 0;
+	static int last_Viewer_objnum = -1;
+	static float last_FOV = Sexp_fov;
+
+	fov_changed = ((last_FOV != Sexp_fov) && (Sexp_fov > 0.0f));
+
+	//First, make sure we take into account 2D Missions.
+	//These replace the normal player in-cockpit view with a topdown view.
+	if (The_mission.flags[Mission::Mission_Flags::Mission_2d])
+	{
+		if (!Viewer_mode)
+		{
+			Viewer_mode = VM_TOPDOWN;
+		}
+	}
+
+	// This code is supposed to detect camera "cuts"... like going between
+	// different views.
+
+	// determine if we need to regenerate the nebula
+	if ((!(last_Viewer_mode & VM_EXTERNAL) && (Viewer_mode & VM_EXTERNAL)) ||							// internal to external 
+		((last_Viewer_mode & VM_EXTERNAL) && !(Viewer_mode & VM_EXTERNAL)) ||							// external to internal
+		(!(last_Viewer_mode & VM_DEAD_VIEW) && (Viewer_mode & VM_DEAD_VIEW)) ||							// non dead-view to dead-view
+		((last_Viewer_mode & VM_DEAD_VIEW) && !(Viewer_mode & VM_DEAD_VIEW)) ||							// dead-view to non dead-view
+		(!(last_Viewer_mode & VM_WARP_CHASE) && (Viewer_mode & VM_WARP_CHASE)) ||						// non warp-chase to warp-chase
+		((last_Viewer_mode & VM_WARP_CHASE) && !(Viewer_mode & VM_WARP_CHASE)) ||						// warp-chase to non warp-chase
+		(!(last_Viewer_mode & VM_OTHER_SHIP) && (Viewer_mode & VM_OTHER_SHIP)) ||						// non other-ship to other-ship
+		((last_Viewer_mode & VM_OTHER_SHIP) && !(Viewer_mode & VM_OTHER_SHIP)) ||						// other-ship to non-other ship
+		(!(last_Viewer_mode & VM_FREECAMERA) && (Viewer_mode & VM_FREECAMERA)) ||
+		((last_Viewer_mode & VM_FREECAMERA) && !(Viewer_mode & VM_FREECAMERA)) ||
+		(!(last_Viewer_mode & VM_TOPDOWN) && (Viewer_mode & VM_TOPDOWN)) ||
+		((last_Viewer_mode & VM_TOPDOWN) && !(Viewer_mode & VM_TOPDOWN)) ||
+		(fov_changed) ||
+		((Viewer_mode & VM_OTHER_SHIP) && (last_Viewer_objnum != Player_ai->target_objnum)) 		// other ship mode, but targets changes
+		) {
+
+		// regenerate the nebula
+		neb2_eye_changed();
+	}
+
+	if ((last_Viewer_mode != Viewer_mode)
+		|| (last_Game_mode != Game_mode)
+		|| (fov_changed)
+		|| (Viewer_mode & VM_FREECAMERA)) {
+		//mprintf(( "************** Camera cut! ************\n" ));
+		last_Viewer_mode = Viewer_mode;
+		last_Game_mode = Game_mode;
+		last_FOV = main_cam->get_fov();
+
+		// Camera moved.  Tell stars & debris to not do blurring.
+		stars_camera_cut();
+	}
+
+	say_view_target();
+
+	if (Viewer_mode & VM_PADLOCK_ANY) {
+		player_display_padlock_view();
+	}
+
+	if (Game_mode & GM_DEAD) {
+		vec3d	vec_to_deader, view_pos;
+		float		dist;
+
+		Viewer_mode |= VM_DEAD_VIEW;
+
+		if (Player_ai->target_objnum != -1) {
+			int view_from_player = 1;
+
+			if (Viewer_mode & VM_OTHER_SHIP) {
+				//	View from target.
+				Viewer_obj = &Objects[Player_ai->target_objnum];
+
+				last_Viewer_objnum = Player_ai->target_objnum;
+
+				if (Viewer_obj->type == OBJ_SHIP) {
+					ship_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					view_from_player = 0;
+				}
+			}
+			else {
+				last_Viewer_objnum = -1;
+			}
+
+			if (Viewer_obj)
+				Script_system.SetHookObject("Viewer", Viewer_obj);
+			else
+				Script_system.RemHookVar("Viewer");
+
+			if (view_from_player) {
+				//	View target from player ship.
+				Viewer_obj = NULL;
+				eye_pos = Player_obj->pos;
+				vm_vec_normalized_dir(&tmp_dir, &Objects[Player_ai->target_objnum].pos, &eye_pos);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, NULL, NULL);
+				//rtn_cid = ship_get_followtarget_eye( Player_obj );
+			}
+		}
+		else {
+			dist = vm_vec_normalized_dir(&vec_to_deader, &Player_obj->pos, &Dead_camera_pos);
+
+			if (dist < MIN_DIST_TO_DEAD_CAMERA)
+				dist += flFrametime * 16.0f;
+
+			vm_vec_scale(&vec_to_deader, -dist);
+			vm_vec_add(&Dead_camera_pos, &Player_obj->pos, &vec_to_deader);
+
+			view_pos = Player_obj->pos;
+
+			if (!(Game_mode & GM_DEAD_BLEW_UP)) {
+				Viewer_mode &= ~(VM_EXTERNAL | VM_CHASE);
+				vm_vec_scale_add2(&Dead_camera_pos, &Original_vec_to_deader, 25.0f * flFrametime);
+				Dead_player_last_vel = Player_obj->phys_info.vel;
+				//nprintf(("AI", "Player death roll vel = %7.3f %7.3f %7.3f\n", Player_obj->phys_info.vel.x, Player_obj->phys_info.vel.y, Player_obj->phys_info.vel.z));
+			}
+			else if (Player_ai->target_objnum != -1) {
+				view_pos = Objects[Player_ai->target_objnum].pos;
+			}
+			else {
+				//	Make camera follow explosion, but gradually slow down.
+				vm_vec_scale_add2(&Player_obj->pos, &Dead_player_last_vel, flFrametime);
+				view_pos = Player_obj->pos;
+				vm_vec_scale(&Dead_player_last_vel, 0.99f);
+				vm_vec_scale_add2(&Dead_camera_pos, &Original_vec_to_deader, MIN(25.0f, vm_vec_mag_quick(&Dead_player_last_vel)) * flFrametime);
+			}
+
+			eye_pos = Dead_camera_pos;
+
+			vm_vec_normalized_dir(&tmp_dir, &Player_obj->pos, &eye_pos);
+
+			vm_vector_2_matrix(&eye_orient, &tmp_dir, NULL, NULL);
+			Viewer_obj = NULL;
+		}
+	}
+
+	// if supernova shockwave
+	if (supernova_camera_cut()) {
+		// no viewer obj
+		Viewer_obj = NULL;
+
+		// call it dead view
+		Viewer_mode |= VM_DEAD_VIEW;
+
+		// set eye pos and orient
+		//rtn_cid = supernova_set_view();
+		supernova_get_eye(&eye_pos, &eye_orient);
+	}
+	else {
+		//	If already blown up, these other modes can override.
+		if (!(Game_mode & (GM_DEAD | GM_DEAD_BLEW_UP))) {
+			Viewer_mode &= ~VM_DEAD_VIEW;
+
+			if (!(Viewer_mode & VM_FREECAMERA))
+				Viewer_obj = Player_obj;
+
+			if (Viewer_mode & VM_OTHER_SHIP) {
+				if (Player_ai->target_objnum != -1) {
+					Viewer_obj = &Objects[Player_ai->target_objnum];
+					last_Viewer_objnum = Player_ai->target_objnum;
+				}
+				else {
+					Viewer_mode &= ~VM_OTHER_SHIP;
+					last_Viewer_objnum = -1;
+				}
+			}
+			else {
+				last_Viewer_objnum = -1;
+			}
+
+			if (Viewer_mode & VM_FREECAMERA) {
+				Viewer_obj = NULL;
+				return cam_get_current();
+			}
+			else if (Viewer_mode & VM_EXTERNAL) {
+				matrix	tm, tm2;
+
+				vm_angles_2_matrix(&tm2, &Viewer_external_info.angles);
+				vm_matrix_x_matrix(&tm, &Viewer_obj->orient, &tm2);
+
+				vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &tm.vec.fvec, 2.0f * Viewer_obj->radius + Viewer_external_info.distance);
+
+				vm_vec_sub(&tmp_dir, &Viewer_obj->pos, &eye_pos);
+				vm_vec_normalize(&tmp_dir);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &Viewer_obj->orient.vec.uvec, NULL);
+				Viewer_obj = NULL;
+
+				//	Modify the orientation based on head orientation.
+				compute_slew_matrix(&eye_orient, &Viewer_slew_angles);
+
+			}
+			else if (Viewer_mode & VM_CHASE) {
+				vec3d	move_dir;
+				vec3d aim_pt;
+
+				if (Viewer_obj->phys_info.speed < 62.5f)
+					move_dir = Viewer_obj->phys_info.vel;
+				else {
+					move_dir = Viewer_obj->phys_info.vel;
+					vm_vec_scale(&move_dir, (62.5f / Viewer_obj->phys_info.speed));
+				}
+
+				vec3d tmp_up;
+				matrix eyemat;
+				ship_get_eye(&tmp_up, &eyemat, Viewer_obj, false, false);
+
+				//create a better 3rd person view if this is the player ship
+				if (Viewer_obj == Player_obj)
+				{
+					//get a point 1000m forward of ship
+					vm_vec_copy_scale(&aim_pt, &Viewer_obj->orient.vec.fvec, 1000.0f);
+					vm_vec_add2(&aim_pt, &Viewer_obj->pos);
+
+					vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &move_dir, -0.02f * Viewer_obj->radius);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.fvec, -2.125f * Viewer_obj->radius - Viewer_chase_info.distance);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.uvec, 0.625f * Viewer_obj->radius + 0.35f * Viewer_chase_info.distance);
+					vm_vec_sub(&tmp_dir, &aim_pt, &eye_pos);
+					vm_vec_normalize(&tmp_dir);
+				}
+				else
+				{
+					vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &move_dir, -0.02f * Viewer_obj->radius);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.fvec, -2.5f * Viewer_obj->radius - Viewer_chase_info.distance);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.uvec, 0.75f * Viewer_obj->radius + 0.35f * Viewer_chase_info.distance);
+					vm_vec_sub(&tmp_dir, &Viewer_obj->pos, &eye_pos);
+					vm_vec_normalize(&tmp_dir);
+				}
+
+				// JAS: I added the following code because if you slew up using
+				// Descent-style physics, tmp_dir and Viewer_obj->orient.vec.uvec are
+				// equal, which causes a zero-length vector in the vm_vector_2_matrix
+				// call because the up and the forward vector are the same.   I fixed
+				// it by adding in a fraction of the right vector all the time to the
+				// up vector.
+				tmp_up = eyemat.vec.uvec;
+				vm_vec_scale_add2(&tmp_up, &eyemat.vec.rvec, 0.00001f);
+
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &tmp_up, NULL);
+				Viewer_obj = NULL;
+
+				//	Modify the orientation based on head orientation.
+				compute_slew_matrix(&eye_orient, &Viewer_slew_angles);
+			}
+			else if (Viewer_mode & VM_WARP_CHASE) {
+				Warp_camera.get_info(&eye_pos, NULL);
+
+				ship * shipp = &Ships[Player_obj->instance];
+
+				vec3d warp_pos = Player_obj->pos;
+				shipp->warpout_effect->getWarpPosition(&warp_pos);
+				vm_vec_sub(&tmp_dir, &warp_pos, &eye_pos);
+				vm_vec_normalize(&tmp_dir);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &Player_obj->orient.vec.uvec, NULL);
+				Viewer_obj = NULL;
+			}
+			else if (Viewer_mode & VM_TOPDOWN) {
+				angles rot_angles = { PI_2, 0.0f, 0.0f };
+				bool position_override = false;
+				if (Viewer_obj->type == OBJ_SHIP) {
+					ship_info *sip = &Ship_info[Ships[Viewer_obj->instance].ship_info_index];
+					if (sip->topdown_offset_def) {
+						eye_pos.xyz.x = Viewer_obj->pos.xyz.x + sip->topdown_offset.xyz.x;
+						eye_pos.xyz.y = Viewer_obj->pos.xyz.y + sip->topdown_offset.xyz.y;
+						eye_pos.xyz.z = Viewer_obj->pos.xyz.z + sip->topdown_offset.xyz.z;
+						position_override = true;
+					}
+				}
+				if (!position_override) {
+					eye_pos.xyz.x = Viewer_obj->pos.xyz.x;
+					eye_pos.xyz.y = Viewer_obj->pos.xyz.y + Viewer_obj->radius * 25.0f;
+					eye_pos.xyz.z = Viewer_obj->pos.xyz.z;
+				}
+				vm_angles_2_matrix(&eye_orient, &rot_angles);
+				Viewer_obj = NULL;
+			}
+			else {
+				// get an eye position based upon the correct type of object
+				switch (Viewer_obj->type) {
+				case OBJ_SHIP:
+					// make a call to get the eye point for the player object
+					ship_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					break;
+				case OBJ_OBSERVER:
+					// make a call to get the eye point for the player object
+					observer_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					break;
+				default:
+					mprintf(("Invalid Value for Viewer_obj->type. Expected values are OBJ_SHIP (1) and OBJ_OBSERVER (12), we encountered %d. Please tell a coder.\n", Viewer_obj->type));
+					Int3();
+				}
+
+#ifdef JOHNS_DEBUG_CODE
+				john_debug_stuff(&eye_pos, &eye_orient);
+#endif
+			}
+		}
+	}
+
+	//VR ADDTION: Add eye offset from center
+	Matrix4 left_eye_pos = VROBJ->m_mat4eyePosLeft;
+	eye_pos.xyz.x = eye_pos.xyz.x;// + left_eye_pos[12];
+		eye_pos.xyz.y = eye_pos.xyz.y; //+ left_eye_pos[13];
+		eye_pos.xyz.z = eye_pos.xyz.z; //+ left_eye_pos[14];
+
+	//Modify view object directly for VR support
+	if (Viewer_obj != NULL)
+	{
+		Viewer_obj->pos.xyz.x = Viewer_obj->pos.xyz.x;
+		Viewer_obj->pos.xyz.y = Viewer_obj->pos.xyz.y;
+		Viewer_obj->pos.xyz.z = Viewer_obj->pos.xyz.z;
+		Viewer_obj->orient = hmd_orientation1;
+	}
+
+	if (Player_obj != NULL)
+
+	{
+
+		Player_obj->pos.xyz.x = Player_obj->pos.xyz.x;
+		Player_obj->pos.xyz.y = Player_obj->pos.xyz.y;
+		Player_obj->pos.xyz.z = Player_obj->pos.xyz.z;
+		Player_obj->orient = hmd_orientation1;
+	}
+	
+	main_cam->set_position(&eye_pos);
+	main_cam->set_rotation(&hmd_orientation1);
+// setup neb2 rendering
+	neb2_render_setup(LeftEye_camera);
+
+	return LeftEye_camera;
+}
+
+
+
+
+camid right_eye_game_render_frame_setup()
+{
+	bool fov_changed;
+
+	if (!RightEye_camera.isValid())
+	{
+		RightEye_camera = cam_create("Right Eye camera");
+	}
+	camera *main_cam = RightEye_camera.getCamera();
+	if (main_cam == NULL)
+	{
+		Error(LOCATION, "Unable to generate Right Eye camera");
+		return camid();
+	}
+
+	vec3d	eye_pos;
+	matrix	eye_orient = vmd_identity_matrix;
+	vec3d	tmp_dir;
+
+	static int last_Viewer_mode = 0;
+	static int last_Game_mode = 0;
+	static int last_Viewer_objnum = -1;
+	static float last_FOV = Sexp_fov;
+
+	fov_changed = ((last_FOV != Sexp_fov) && (Sexp_fov > 0.0f));
+
+	//First, make sure we take into account 2D Missions.
+	//These replace the normal player in-cockpit view with a topdown view.
+	if (The_mission.flags[Mission::Mission_Flags::Mission_2d])
+	{
+		if (!Viewer_mode)
+		{
+			Viewer_mode = VM_TOPDOWN;
+		}
+	}
+
+	// This code is supposed to detect camera "cuts"... like going between
+	// different views.
+
+	// determine if we need to regenerate the nebula
+	if ((!(last_Viewer_mode & VM_EXTERNAL) && (Viewer_mode & VM_EXTERNAL)) ||							// internal to external 
+		((last_Viewer_mode & VM_EXTERNAL) && !(Viewer_mode & VM_EXTERNAL)) ||							// external to internal
+		(!(last_Viewer_mode & VM_DEAD_VIEW) && (Viewer_mode & VM_DEAD_VIEW)) ||							// non dead-view to dead-view
+		((last_Viewer_mode & VM_DEAD_VIEW) && !(Viewer_mode & VM_DEAD_VIEW)) ||							// dead-view to non dead-view
+		(!(last_Viewer_mode & VM_WARP_CHASE) && (Viewer_mode & VM_WARP_CHASE)) ||						// non warp-chase to warp-chase
+		((last_Viewer_mode & VM_WARP_CHASE) && !(Viewer_mode & VM_WARP_CHASE)) ||						// warp-chase to non warp-chase
+		(!(last_Viewer_mode & VM_OTHER_SHIP) && (Viewer_mode & VM_OTHER_SHIP)) ||						// non other-ship to other-ship
+		((last_Viewer_mode & VM_OTHER_SHIP) && !(Viewer_mode & VM_OTHER_SHIP)) ||						// other-ship to non-other ship
+		(!(last_Viewer_mode & VM_FREECAMERA) && (Viewer_mode & VM_FREECAMERA)) ||
+		((last_Viewer_mode & VM_FREECAMERA) && !(Viewer_mode & VM_FREECAMERA)) ||
+		(!(last_Viewer_mode & VM_TOPDOWN) && (Viewer_mode & VM_TOPDOWN)) ||
+		((last_Viewer_mode & VM_TOPDOWN) && !(Viewer_mode & VM_TOPDOWN)) ||
+		(fov_changed) ||
+		((Viewer_mode & VM_OTHER_SHIP) && (last_Viewer_objnum != Player_ai->target_objnum)) 		// other ship mode, but targets changes
+		) {
+
+		// regenerate the nebula
+		neb2_eye_changed();
+	}
+
+	if ((last_Viewer_mode != Viewer_mode)
+		|| (last_Game_mode != Game_mode)
+		|| (fov_changed)
+		|| (Viewer_mode & VM_FREECAMERA)) {
+		//mprintf(( "************** Camera cut! ************\n" ));
+		last_Viewer_mode = Viewer_mode;
+		last_Game_mode = Game_mode;
+		last_FOV = main_cam->get_fov();
+
+		// Camera moved.  Tell stars & debris to not do blurring.
+		stars_camera_cut();
+	}
+
+	say_view_target();
+
+	if (Viewer_mode & VM_PADLOCK_ANY) {
+		player_display_padlock_view();
+	}
+
+	if (Game_mode & GM_DEAD) {
+		vec3d	vec_to_deader, view_pos;
+		float		dist;
+
+		Viewer_mode |= VM_DEAD_VIEW;
+
+		if (Player_ai->target_objnum != -1) {
+			int view_from_player = 1;
+
+			if (Viewer_mode & VM_OTHER_SHIP) {
+				//	View from target.
+				Viewer_obj = &Objects[Player_ai->target_objnum];
+
+				last_Viewer_objnum = Player_ai->target_objnum;
+
+				if (Viewer_obj->type == OBJ_SHIP) {
+					ship_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					view_from_player = 0;
+				}
+			}
+			else {
+				last_Viewer_objnum = -1;
+			}
+
+			if (Viewer_obj)
+				Script_system.SetHookObject("Viewer", Viewer_obj);
+			else
+				Script_system.RemHookVar("Viewer");
+
+			if (view_from_player) {
+				//	View target from player ship.
+				Viewer_obj = NULL;
+				eye_pos = Player_obj->pos;
+				vm_vec_normalized_dir(&tmp_dir, &Objects[Player_ai->target_objnum].pos, &eye_pos);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, NULL, NULL);
+				//rtn_cid = ship_get_followtarget_eye( Player_obj );
+			}
+		}
+		else {
+			dist = vm_vec_normalized_dir(&vec_to_deader, &Player_obj->pos, &Dead_camera_pos);
+
+			if (dist < MIN_DIST_TO_DEAD_CAMERA)
+				dist += flFrametime * 16.0f;
+
+			vm_vec_scale(&vec_to_deader, -dist);
+			vm_vec_add(&Dead_camera_pos, &Player_obj->pos, &vec_to_deader);
+
+			view_pos = Player_obj->pos;
+
+			if (!(Game_mode & GM_DEAD_BLEW_UP)) {
+				Viewer_mode &= ~(VM_EXTERNAL | VM_CHASE);
+				vm_vec_scale_add2(&Dead_camera_pos, &Original_vec_to_deader, 25.0f * flFrametime);
+				Dead_player_last_vel = Player_obj->phys_info.vel;
+				//nprintf(("AI", "Player death roll vel = %7.3f %7.3f %7.3f\n", Player_obj->phys_info.vel.x, Player_obj->phys_info.vel.y, Player_obj->phys_info.vel.z));
+			}
+			else if (Player_ai->target_objnum != -1) {
+				view_pos = Objects[Player_ai->target_objnum].pos;
+			}
+			else {
+				//	Make camera follow explosion, but gradually slow down.
+				vm_vec_scale_add2(&Player_obj->pos, &Dead_player_last_vel, flFrametime);
+				view_pos = Player_obj->pos;
+				vm_vec_scale(&Dead_player_last_vel, 0.99f);
+				vm_vec_scale_add2(&Dead_camera_pos, &Original_vec_to_deader, MIN(25.0f, vm_vec_mag_quick(&Dead_player_last_vel)) * flFrametime);
+			}
+
+			eye_pos = Dead_camera_pos;
+
+			vm_vec_normalized_dir(&tmp_dir, &Player_obj->pos, &eye_pos);
+
+			vm_vector_2_matrix(&eye_orient, &tmp_dir, NULL, NULL);
+			Viewer_obj = NULL;
+		}
+	}
+
+	// if supernova shockwave
+	if (supernova_camera_cut()) {
+		// no viewer obj
+		Viewer_obj = NULL;
+
+		// call it dead view
+		Viewer_mode |= VM_DEAD_VIEW;
+
+		// set eye pos and orient
+		//rtn_cid = supernova_set_view();
+		supernova_get_eye(&eye_pos, &eye_orient);
+	}
+	else {
+		//	If already blown up, these other modes can override.
+		if (!(Game_mode & (GM_DEAD | GM_DEAD_BLEW_UP))) {
+			Viewer_mode &= ~VM_DEAD_VIEW;
+
+			if (!(Viewer_mode & VM_FREECAMERA))
+				Viewer_obj = Player_obj;
+
+			if (Viewer_mode & VM_OTHER_SHIP) {
+				if (Player_ai->target_objnum != -1) {
+					Viewer_obj = &Objects[Player_ai->target_objnum];
+					last_Viewer_objnum = Player_ai->target_objnum;
+				}
+				else {
+					Viewer_mode &= ~VM_OTHER_SHIP;
+					last_Viewer_objnum = -1;
+				}
+			}
+			else {
+				last_Viewer_objnum = -1;
+			}
+
+			if (Viewer_mode & VM_FREECAMERA) {
+				Viewer_obj = NULL;
+				return cam_get_current();
+			}
+			else if (Viewer_mode & VM_EXTERNAL) {
+				matrix	tm, tm2;
+
+				vm_angles_2_matrix(&tm2, &Viewer_external_info.angles);
+				vm_matrix_x_matrix(&tm, &Viewer_obj->orient, &tm2);
+
+				vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &tm.vec.fvec, 2.0f * Viewer_obj->radius + Viewer_external_info.distance);
+
+				vm_vec_sub(&tmp_dir, &Viewer_obj->pos, &eye_pos);
+				vm_vec_normalize(&tmp_dir);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &Viewer_obj->orient.vec.uvec, NULL);
+				Viewer_obj = NULL;
+
+				//	Modify the orientation based on head orientation.
+				compute_slew_matrix(&eye_orient, &Viewer_slew_angles);
+
+			}
+			else if (Viewer_mode & VM_CHASE) {
+				vec3d	move_dir;
+				vec3d aim_pt;
+
+				if (Viewer_obj->phys_info.speed < 62.5f)
+					move_dir = Viewer_obj->phys_info.vel;
+				else {
+					move_dir = Viewer_obj->phys_info.vel;
+					vm_vec_scale(&move_dir, (62.5f / Viewer_obj->phys_info.speed));
+				}
+
+				vec3d tmp_up;
+				matrix eyemat;
+				ship_get_eye(&tmp_up, &eyemat, Viewer_obj, false, false);
+
+				//create a better 3rd person view if this is the player ship
+				if (Viewer_obj == Player_obj)
+				{
+					//get a point 1000m forward of ship
+					vm_vec_copy_scale(&aim_pt, &Viewer_obj->orient.vec.fvec, 1000.0f);
+					vm_vec_add2(&aim_pt, &Viewer_obj->pos);
+
+					vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &move_dir, -0.02f * Viewer_obj->radius);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.fvec, -2.125f * Viewer_obj->radius - Viewer_chase_info.distance);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.uvec, 0.625f * Viewer_obj->radius + 0.35f * Viewer_chase_info.distance);
+					vm_vec_sub(&tmp_dir, &aim_pt, &eye_pos);
+					vm_vec_normalize(&tmp_dir);
+				}
+				else
+				{
+					vm_vec_scale_add(&eye_pos, &Viewer_obj->pos, &move_dir, -0.02f * Viewer_obj->radius);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.fvec, -2.5f * Viewer_obj->radius - Viewer_chase_info.distance);
+					vm_vec_scale_add2(&eye_pos, &eyemat.vec.uvec, 0.75f * Viewer_obj->radius + 0.35f * Viewer_chase_info.distance);
+					vm_vec_sub(&tmp_dir, &Viewer_obj->pos, &eye_pos);
+					vm_vec_normalize(&tmp_dir);
+				}
+
+				// JAS: I added the following code because if you slew up using
+				// Descent-style physics, tmp_dir and Viewer_obj->orient.vec.uvec are
+				// equal, which causes a zero-length vector in the vm_vector_2_matrix
+				// call because the up and the forward vector are the same.   I fixed
+				// it by adding in a fraction of the right vector all the time to the
+				// up vector.
+				tmp_up = eyemat.vec.uvec;
+				vm_vec_scale_add2(&tmp_up, &eyemat.vec.rvec, 0.00001f);
+
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &tmp_up, NULL);
+				Viewer_obj = NULL;
+
+				//	Modify the orientation based on head orientation.
+				compute_slew_matrix(&eye_orient, &Viewer_slew_angles);
+			}
+			else if (Viewer_mode & VM_WARP_CHASE) {
+				Warp_camera.get_info(&eye_pos, NULL);
+
+				ship * shipp = &Ships[Player_obj->instance];
+
+				vec3d warp_pos = Player_obj->pos;
+				shipp->warpout_effect->getWarpPosition(&warp_pos);
+				vm_vec_sub(&tmp_dir, &warp_pos, &eye_pos);
+				vm_vec_normalize(&tmp_dir);
+				vm_vector_2_matrix(&eye_orient, &tmp_dir, &Player_obj->orient.vec.uvec, NULL);
+				Viewer_obj = NULL;
+			}
+			else if (Viewer_mode & VM_TOPDOWN) {
+				angles rot_angles = { PI_2, 0.0f, 0.0f };
+				bool position_override = false;
+				if (Viewer_obj->type == OBJ_SHIP) {
+					ship_info *sip = &Ship_info[Ships[Viewer_obj->instance].ship_info_index];
+					if (sip->topdown_offset_def) {
+						eye_pos.xyz.x = Viewer_obj->pos.xyz.x + sip->topdown_offset.xyz.x;
+						eye_pos.xyz.y = Viewer_obj->pos.xyz.y + sip->topdown_offset.xyz.y;
+						eye_pos.xyz.z = Viewer_obj->pos.xyz.z + sip->topdown_offset.xyz.z;
+						position_override = true;
+					}
+				}
+				if (!position_override) {
+					eye_pos.xyz.x = Viewer_obj->pos.xyz.x;
+					eye_pos.xyz.y = Viewer_obj->pos.xyz.y + Viewer_obj->radius * 25.0f;
+					eye_pos.xyz.z = Viewer_obj->pos.xyz.z;
+				}
+				vm_angles_2_matrix(&eye_orient, &rot_angles);
+				Viewer_obj = NULL;
+			}
+			else {
+				// get an eye position based upon the correct type of object
+				switch (Viewer_obj->type) {
+				case OBJ_SHIP:
+					// make a call to get the eye point for the player object
+					ship_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					break;
+				case OBJ_OBSERVER:
+					// make a call to get the eye point for the player object
+					observer_get_eye(&eye_pos, &eye_orient, Viewer_obj);
+					break;
+				default:
+					mprintf(("Invalid Value for Viewer_obj->type. Expected values are OBJ_SHIP (1) and OBJ_OBSERVER (12), we encountered %d. Please tell a coder.\n", Viewer_obj->type));
+					Int3();
+				}
+
+#ifdef JOHNS_DEBUG_CODE
+				john_debug_stuff(&eye_pos, &eye_orient);
+#endif
+			}
+		}
+	}
+
+
+	//VR ADDTION: Add eye offset from center
+	Matrix4 right_eye_pos = VROBJ->m_mat4eyePosRight;
+	eye_pos.xyz.x = eye_pos.xyz.x + right_eye_pos[12];
+	eye_pos.xyz.y = eye_pos.xyz.y + right_eye_pos[13];
+	eye_pos.xyz.z = eye_pos.xyz.z + right_eye_pos[14];
+
+
+	
+	main_cam->set_position(&eye_pos);
+	main_cam->set_rotation(&hmd_orientation1);
+
+	// setup neb2 rendering
+	neb2_render_setup(RightEye_camera);
+
+	return RightEye_camera;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 #ifndef NDEBUG
 extern void ai_debug_render_stuff();
 #endif
@@ -3376,8 +4094,8 @@ void game_render_frame( camid cid )
 		//Handle jitter if not cutscene camera
 		eye_no_jitter = eye_orient;
 		if( !(Viewer_mode & VM_FREECAMERA) ) {
-			apply_view_shake(&eye_orient);
-			cam->set_rotation(&eye_orient);
+		//	apply_view_shake(&eye_orient);
+		//	cam->set_rotation(&hmd_orientation1);
 		}
 
 		//Maybe override FOV from SEXP
@@ -3393,7 +4111,8 @@ void game_render_frame( camid cid )
 
 	// maybe offset the HUD (jitter stuff) and measure the 2D displacement between the player's view and ship vector
 	int dont_offset = ((Game_mode & GM_MULTIPLAYER) && (Net_player->flags & NETINFO_FLAG_OBSERVER));
-	HUD_set_offsets(Viewer_obj, !dont_offset, &eye_no_jitter);
+	
+	//VR REMOVE: HUD_set_offsets(Viewer_obj, !dont_offset, &eye_no_jitter);
 
 	// for multiplayer clients, call code in Shield.cpp to set up the Shield_hit array.  Have to
 	// do this becaues of the disjointed nature of this system (in terms of setup and execution).
@@ -4113,98 +4832,156 @@ void game_frame(bool paused)
 				gr_clear();
 			}
 
-			DEBUG_GET_TIME( clear_time2 )
-			DEBUG_GET_TIME( render3_time1 )
-			
-			camid cid = game_render_frame_setup();
+			DEBUG_GET_TIME(clear_time2)
+				DEBUG_GET_TIME(render3_time1)
 
-			game_render_frame( cid );
-			
+				// = game_render_frame_setup();
 
-			//Cutscene bars
-			clip_frame_view();
 
-			// save the eye position and orientation
-			if ( Game_mode & GM_MULTIPLAYER ) {
-				cid.getCamera()->get_info(&Net_player->s_info.eye_pos, &Net_player->s_info.eye_orient);
-			}
+			//VR STUFF HERE
 
-			Scripting_didnt_draw_hud = 1;
-			Script_system.SetHookObject("Self", Viewer_obj);
-			if(Script_system.IsConditionOverride(CHA_HUDDRAW, Viewer_obj)) {
-				Scripting_didnt_draw_hud = 0;
-			}
 
-			if(Scripting_didnt_draw_hud) {
-				GR_DEBUG_SCOPE("Render HUD");
+			//This updates the data from the headset
+  			VROBJ->UpdateHMDMatrixPose();
+	    	VROBJ->SetupCameras();
 
-				game_render_hud(cid);
-			}
-			HUD_reset_clip();
 
-			if( (Game_detail_flags & DETAIL_FLAG_HUD) && (!(Game_mode & GM_MULTIPLAYER) || ((Game_mode & GM_MULTIPLAYER) && !(Net_player->flags & NETINFO_FLAG_OBSERVER))) ) {
-				anim_render_all(0, flFrametime);
-			}
+			//VR ADDITION: Let's try to get the orientation of the HMD
+			Matrix4 hmd_pose = VROBJ->m_mat4HMDPose;
 
-			if (!(Viewer_mode & (VM_EXTERNAL | VM_DEAD_VIEW | VM_WARP_CHASE | VM_PADLOCK_ANY))) 
-			{
-				Script_system.RunCondition(CHA_HUDDRAW, '\0', NULL, Viewer_obj);
-			}
-			Script_system.RemHookVar("Self");
-			
-			// check to see if we should display the death died popup
-			if(Game_mode & GM_DEAD_BLEW_UP){				
-				if(Game_mode & GM_MULTIPLAYER){
-					// catch the situation where we're supposed to be warping out on this transition
-					if(Net_player->flags & NETINFO_FLAG_WARPING_OUT){
-						multi_handle_sudden_mission_end();
-						send_debrief_event();
-					} else if((Player_died_popup_wait != -1) && (timestamp_elapsed(Player_died_popup_wait))){
-						Player_died_popup_wait = -1;
-						popupdead_start();
+			hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];		//m1
+			hmd_orientation1.vec.uvec.xyz.z = hmd_pose[9];		//m8
+			hmd_orientation1.vec.uvec.xyz.x = hmd_pose[1];		//m2
+			hmd_orientation1.vec.rvec.xyz.z = hmd_pose[8];		//m7
+			hmd_orientation1.vec.fvec.xyz.x = hmd_pose[2];	 	//m3
+			hmd_orientation1.vec.rvec.xyz.y = hmd_pose[4];		//m4
+			hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
+			hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
+
+
+			invert_hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];		//m1
+			invert_hmd_orientation1.vec.uvec.xyz.z = hmd_pose[9];		//m8
+			invert_hmd_orientation1.vec.uvec.xyz.x = hmd_pose[1];		//m2
+			invert_hmd_orientation1.vec.rvec.xyz.z = hmd_pose[8];		//m7
+			invert_hmd_orientation1.vec.fvec.xyz.x = hmd_pose[2];	 	//m3
+			invert_hmd_orientation1.vec.rvec.xyz.y = hmd_pose[4];		//m4
+			invert_hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
+			invert_hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
+			camid cid;
+
+			for (int ii = 1; ii < 3; ii = ii + 1) {
+
+				//Alternate between rendering left and right eye
+				if (ii == 1) {
+					cid = left_eye_game_render_frame_setup();
+				}
+				else {
+					cid = right_eye_game_render_frame_setup();
+				}
+				//Render Main Camera (This is the regular camera)
+				//game_render_frame( cid );
+
+				//Render left and right camera
+				game_render_frame(cid);
+
+
+
+
+
+				/*
+				//Cutscene bars
+				clip_frame_view();
+
+				// save the eye position and orientation
+				if (Game_mode & GM_MULTIPLAYER) {
+					cid.getCamera()->get_info(&Net_player->s_info.eye_pos, &Net_player->s_info.eye_orient);
+				}
+
+				Scripting_didnt_draw_hud = 1;
+				Script_system.SetHookObject("Self", Viewer_obj);
+				if (Script_system.IsConditionOverride(CHA_HUDDRAW, Viewer_obj)) {
+					Scripting_didnt_draw_hud = 0;
+				}
+				*/
+				if (Scripting_didnt_draw_hud) {
+					GR_DEBUG_SCOPE("Render HUD");
+					
+					game_render_hud(cid);
+				}
+				HUD_reset_clip();
+
+				if ((Game_detail_flags & DETAIL_FLAG_HUD) && (!(Game_mode & GM_MULTIPLAYER) || ((Game_mode & GM_MULTIPLAYER) && !(Net_player->flags & NETINFO_FLAG_OBSERVER)))) {
+					anim_render_all(0, flFrametime);
+				}
+
+				if (!(Viewer_mode & (VM_EXTERNAL | VM_DEAD_VIEW | VM_WARP_CHASE | VM_PADLOCK_ANY)))
+				{
+					Script_system.RunCondition(CHA_HUDDRAW, '\0', NULL, Viewer_obj);
+				}
+				Script_system.RemHookVar("Self");
+
+				// check to see if we should display the death died popup
+				if (Game_mode & GM_DEAD_BLEW_UP) {
+					if (Game_mode & GM_MULTIPLAYER) {
+						// catch the situation where we're supposed to be warping out on this transition
+						if (Net_player->flags & NETINFO_FLAG_WARPING_OUT) {
+							multi_handle_sudden_mission_end();
+							send_debrief_event();
+						}
+						else if ((Player_died_popup_wait != -1) && (timestamp_elapsed(Player_died_popup_wait))) {
+							Player_died_popup_wait = -1;
+							popupdead_start();
+						}
 					}
-				} else {
-					if((Player_died_popup_wait != -1) && (timestamp_elapsed(Player_died_popup_wait))){
-						Player_died_popup_wait = -1;
-						popupdead_start();
+					else {
+						if ((Player_died_popup_wait != -1) && (timestamp_elapsed(Player_died_popup_wait))) {
+							Player_died_popup_wait = -1;
+							popupdead_start();
+						}
 					}
 				}
+
+				// Goober5000 - check if we should red-alert
+				// (this is approximately where the red_alert_check_status() function tree began in the pre-HUD-overhaul code)
+				red_alert_maybe_move_to_next_mission();
+
+				DEBUG_GET_TIME(render3_time2)
+					DEBUG_GET_TIME(render2_time1)
+
+					
+					gr_reset_clip();
+				game_get_framerate();
+				game_show_framerate();
+				game_show_eye_pos(cid);
+
+				game_show_time_left();
+
+				gr_reset_clip();
+
+				
+				game_render_post_frame();
+				
+				game_tst_frame();
+				
+				DEBUG_GET_TIME(render2_time2)
+
+					// maybe render and process the dead popup
+					game_maybe_do_dead_popup(flFrametime);
+
+				// If a regular popup is active, don't flip (popup code flips)
+				if (!popup_running_state()) {
+					DEBUG_GET_TIME(flip_time1)
+						game_flip_page_and_time_it();
+					DEBUG_GET_TIME(flip_time2)
+				}
+				
+				
 			}
-
-			// Goober5000 - check if we should red-alert
-			// (this is approximately where the red_alert_check_status() function tree began in the pre-HUD-overhaul code)
-			red_alert_maybe_move_to_next_mission();
-
-			DEBUG_GET_TIME( render3_time2 )
-			DEBUG_GET_TIME( render2_time1 )
-
-			gr_reset_clip();
-			game_get_framerate();
-			game_show_framerate();
-			game_show_eye_pos(cid);
-
-			game_show_time_left();
-
-			gr_reset_clip();
-			game_render_post_frame();
-
-			game_tst_frame();
-
-			DEBUG_GET_TIME( render2_time2 )
-
-			// maybe render and process the dead popup
-			game_maybe_do_dead_popup(flFrametime);
 			
-			// If a regular popup is active, don't flip (popup code flips)
-			if( !popup_running_state() ){
-				DEBUG_GET_TIME( flip_time1 )
-				game_flip_page_and_time_it();
-				DEBUG_GET_TIME( flip_time2 )
-			}
-
 		} else {
 			game_show_standalone_framerate();
 		}
+
 	}
 
 	game_do_training_checks();
@@ -6798,8 +7575,9 @@ void game_launch_launcher_on_exit()
 //
 void game_shutdown(void)
 {
-	headtracking::shutdown();
+
 	VROBJ->VR_Shutdown();
+	headtracking::shutdown();
 	fsspeech_deinit();
 #ifdef FS2_VOICER
 	if(Cmdline_voice_recognition)

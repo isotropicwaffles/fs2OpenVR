@@ -1528,6 +1528,7 @@ bool gr_opengl_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 		opengl_go_windowed();
 	} else {
 		opengl_go_fullscreen();
+
 	}
 
 	init_extensions();

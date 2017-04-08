@@ -24,6 +24,10 @@ SCP_vector<camera*> Cameras;
 camid Current_camera;
 camid Main_camera;
 
+//VR STUFF FOR GLOBAL CAMERAS
+camid LeftEye_camera;
+camid RightEye_camera;
+
 //*************************CLASS: camera*************************
 //This is where the camera class beings! :D
 camera::camera(const char *in_name, int in_signature)

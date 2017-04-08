@@ -224,10 +224,17 @@ extern camid RightEye_camera;
 extern void game_level_init();
 extern void game_post_level_init();
 extern camid game_render_frame_setup();
+//VR ADDITIONS
+extern camid left_eye_game_render_frame_setup();
+extern camid right_eye_game_render_frame_setup();
+
 extern void game_render_frame(camid cid);
+
 extern void game_simulation_frame();
 extern void game_update_missiontime();
 extern void game_render_post_frame();
 
 #endif			// endif of #ifndef STAMPER_PROGRAM
 #endif 
+
+//camid cid

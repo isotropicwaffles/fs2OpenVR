@@ -254,10 +254,10 @@ void iVr::RenderFrame()
 		//RenderStereoTargets();
 		//RenderCompanionWindow();
 
-	//	vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-	//	vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
-	//	vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
-	//	vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+		//vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)leftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+		//vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
+		//vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)rightEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+		//vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
 	}
 
 	

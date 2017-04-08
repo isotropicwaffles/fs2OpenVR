@@ -26,9 +26,21 @@
 class iVr
 {
 public:
+	
+	//Variables 
+	Matrix4 m_mat4HMDPose;
+	Matrix4 m_mat4eyePosLeft;
+	Matrix4 m_mat4eyePosRight;
+
+	Matrix4 m_mat4ProjectionCenter;
+	Matrix4 m_mat4ProjectionLeft;
+	Matrix4 m_mat4ProjectionRight;
+	
 	//Class Constructor
 
 	iVr(){};
+
+	
 
 	//virtual ~iVr();
 
@@ -43,6 +55,13 @@ public:
 	//			into a std::string
 	//-----------------------------------------------------------------------------
 	std::string GetTrackedDeviceString(vr::IVRSystem *pHmd, vr::TrackedDeviceIndex_t unDevice, vr::TrackedDeviceProperty prop, vr::TrackedPropertyError *peError);
+
+	void UpdateHMDMatrixPose();
+	//-----------------------------------------------------------------------------
+	// Purpose: Setups up camera transformation stuff
+	//-----------------------------------------------------------------------------
+	void SetupCameras();
+
 
 
 private: 
@@ -62,13 +81,6 @@ private:
 	std::string m_strPoseClasses;                            // what classes we saw poses for this frame
 	char m_rDevClassChar[vr::k_unMaxTrackedDeviceCount];   // for each device, a character representing its class
 
-	Matrix4 m_mat4HMDPose;
-	Matrix4 m_mat4eyePosLeft;
-	Matrix4 m_mat4eyePosRight;
-
-	Matrix4 m_mat4ProjectionCenter;
-	Matrix4 m_mat4ProjectionLeft;
-	Matrix4 m_mat4ProjectionRight;
 
 	int m_iTrackedControllerCount;
 	int m_iTrackedControllerCount_Last;
@@ -83,14 +95,9 @@ private:
 
 	//Internal Functions
 
-	void UpdateHMDMatrixPose();
 	Matrix4 ConvertSteamVRMatrixToMatrix4(const vr::HmdMatrix34_t &matPose);
 	
 
-	//-----------------------------------------------------------------------------
-	// Purpose: Setups up camera transformation stuff
-	//-----------------------------------------------------------------------------
-	void SetupCameras();
 
 
 	//-----------------------------------------------------------------------------
