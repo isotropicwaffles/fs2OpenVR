@@ -909,8 +909,8 @@ bool gr_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, int d_mode, 
 			SDL_DisplayMode displayMode;
 			if (SDL_GetDesktopDisplayMode(display, &displayMode) == 0)
 			{
-				width = displayMode.w;
-				height = displayMode.h;
+				width = 1966;// displayMode.w;
+				height = 2184;// displayMode.h;
 				int sdlBits = SDL_BITSPERPIXEL(displayMode.format);
 
 				if (SDL_ISPIXELFORMAT_ALPHA(displayMode.format))

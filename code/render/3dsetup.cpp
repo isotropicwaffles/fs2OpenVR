@@ -145,7 +145,7 @@ void g3_set_view_matrix(const vec3d *view_pos, const matrix *view_matrix, float 
 {
 	Assert( G3_count == 1 );
 
-	View_zoom = zoom;
+	View_zoom = 1.0f;
 	View_position = *view_pos;
 
 	View_matrix = *view_matrix;

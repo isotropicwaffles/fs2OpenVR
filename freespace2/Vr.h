@@ -35,7 +35,11 @@ public:
 	Matrix4 m_mat4ProjectionCenter;
 	Matrix4 m_mat4ProjectionLeft;
 	Matrix4 m_mat4ProjectionRight;
-	
+	uint32_t m_nRenderWidth;
+	uint32_t m_nRenderHeight;
+
+	float m_fNearClip;
+	float m_fFarClip;
 	//Class Constructor
 
 	iVr(){};
@@ -61,6 +65,10 @@ public:
 	// Purpose: Setups up camera transformation stuff
 	//-----------------------------------------------------------------------------
 	void SetupCameras();
+	//-----------------------------------------------------------------------------
+	// Purpose: This appears to set up frame buffers based on openVR suggested width and height
+	//-----------------------------------------------------------------------------
+	bool SetupStereoRenderTargets();
 
 
 
@@ -87,11 +95,7 @@ private:
 	int m_iValidPoseCount;
 	int m_iValidPoseCount_Last;
 
-	uint32_t m_nRenderWidth;
-	uint32_t m_nRenderHeight;
 
-	float m_fNearClip;
-	float m_fFarClip;
 
 	//Internal Functions
 
@@ -117,10 +121,6 @@ private:
 	//-----------------------------------------------------------------------------
 	Matrix4 GetCurrentViewProjectionMatrix(vr::Hmd_Eye nEye);
 
-	//-----------------------------------------------------------------------------
-	// Purpose: This appears to set up frame buffers based on openVR suggested width and height
-	//-----------------------------------------------------------------------------
-	bool SetupStereoRenderTargets();
 
 	//-----------------------------------------------------------------------------
 	// Purpose: This should render the frame

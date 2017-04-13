@@ -100,7 +100,7 @@ class SDLWindowViewPort: public os::Viewport {
 		SDL_GL_SwapWindow(_window);
 	}
 	virtual void setState(os::ViewportState state) override {
-		switch (state) {
+		switch (os::ViewportState::Borderless) {
 			case os::ViewportState::Windowed:
 				SDL_SetWindowFullscreen(_window, 0);
 				SDL_SetWindowBordered(_window, SDL_FALSE);
@@ -119,9 +119,9 @@ class SDLWindowViewPort: public os::Viewport {
 	}
 	virtual void minimize() override {
 		// lets not minimize if we are in windowed mode
-		if (!(SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN)) {
-			return;
-		}
+		//if (!(SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN)) {
+		//	return;
+		//}
 
 		SDL_MinimizeWindow(_window);
 	}

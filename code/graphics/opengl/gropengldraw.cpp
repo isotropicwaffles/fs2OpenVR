@@ -132,7 +132,7 @@ GLuint deferred_light_cylinder_vbo = 0;
 GLuint deferred_light_cylinder_ibo = 0;
 GLushort deferred_light_cylinder_vcount = 0;
 GLuint deferred_light_cylinder_icount = 0;
-
+//extern GLuint TEXTUREIDCOMMON;
 static opengl_vertex_bind GL_array_binding_data[] =
 {
 	{ vertex_format_data::POSITION4,	4, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::POSITION	},
@@ -2010,6 +2010,7 @@ void gr_opengl_scene_texture_end()
 		GL_state.DepthMask(depth_mask);
 		GL_state.Blend(blend);
 		GL_state.CullFace(cull);
+		//TEXTUREIDCOMMON = Scene_color_texture;
 	}
 
 	// Reset the UV scale values

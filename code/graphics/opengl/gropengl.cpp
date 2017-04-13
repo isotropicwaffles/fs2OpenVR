@@ -105,6 +105,11 @@ void opengl_go_fullscreen()
 	GL_windowed = 0;
 }
 
+
+
+
+
+
 void opengl_go_windowed()
 {
 	if ( ( !Cmdline_fullscreen_window && !Cmdline_window ) /*|| GL_windowed*/ || Fred_running )

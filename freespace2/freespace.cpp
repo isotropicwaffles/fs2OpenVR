@@ -177,6 +177,7 @@
 #include <SDL_main.h>
 
 extern int Om_tracker_flag; // needed for FS2OpenPXO config
+//GLuint TEXTUREIDCOMMON;
 
 
 #ifdef WIN32
@@ -214,7 +215,17 @@ void fs2netd_spew_table_checksums(const char *outfile);
 
 extern bool frame_rate_display;
 iVr* VROBJ = new iVr();
+GLuint textureIDLeft;
+GLuint textureIDRight;
+GLuint RightFramebufferName;
+GLuint LeftFramebufferName;
+GLuint Leftdepthrenderbuffer;
+GLuint Rightdepthrenderbuffer;
+GLuint LeftrenderedTexture;
+GLuint RightrenderedTexture;
 
+bool firstLeft = true;
+bool firstRight = true;;
 matrix hmd_orientation1;
 matrix invert_hmd_orientation1;
 
@@ -1656,7 +1667,12 @@ void game_init()
 	int s1 __UNUSED, e1 __UNUSED;
 	const char *ptr;
 	char whee[MAX_PATH_LEN];
+	
+	//Initialize VR
+	VROBJ->VR_Init();
 
+	gr_screen.max_w = VROBJ->m_nRenderWidth;
+	gr_screen.max_h = VROBJ->m_nRenderHeight;
 	Game_current_mission_filename[0] = 0;
 
 	// Moved from rand32, if we're gonna break, break immediately.
@@ -2005,10 +2021,72 @@ void game_init()
 
 	mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
 
-	//Initialize VR
-	VROBJ->VR_Init();
-	
 
+
+
+	glGenFramebuffers(1, &LeftFramebufferName);
+	glBindFramebuffer(GL_FRAMEBUFFER, LeftFramebufferName);
+
+	// The texture we're going to render to
+	glGenTextures(1, &LeftrenderedTexture);
+
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, LeftrenderedTexture);
+
+	// Give an empty image to OpenGL ( the last "0" )
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+	// Poor filtering. Needed !
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	// The depth buffer
+	glGenRenderbuffers(1, &Leftdepthrenderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, Leftdepthrenderbuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Leftdepthrenderbuffer);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, LeftrenderedTexture, 0);
+
+	glGenFramebuffers(1, &RightFramebufferName);
+	glGenTextures(1, &RightrenderedTexture);
+	glBindFramebuffer(GL_FRAMEBUFFER, RightFramebufferName);
+
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, RightrenderedTexture);
+
+	// Give an empty image to OpenGL ( the last "0" )
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+	// Poor filtering. Needed !
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	// The depth buffer
+	glGenRenderbuffers(1, &Rightdepthrenderbuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, Rightdepthrenderbuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Rightdepthrenderbuffer);
+
+	// Set "renderedTexture" as our colour attachement #0
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, RightrenderedTexture, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	/*
+	glGenTextures(1, &textureIDLeft);
+	glBindTexture(GL_TEXTURE_2D, textureIDLeft);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL	);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenTextures(1, &textureIDRight);
+	glBindTexture(GL_TEXTURE_2D, textureIDRight);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	*/
 }
 
 char transfer_text[128];
@@ -3683,9 +3761,9 @@ camid left_eye_game_render_frame_setup()
 
 	//VR ADDTION: Add eye offset from center
 	Matrix4 left_eye_pos = VROBJ->m_mat4eyePosLeft;
-	eye_pos.xyz.x = eye_pos.xyz.x;// + left_eye_pos[12];
-		eye_pos.xyz.y = eye_pos.xyz.y; //+ left_eye_pos[13];
-		eye_pos.xyz.z = eye_pos.xyz.z; //+ left_eye_pos[14];
+	eye_pos.xyz.x = eye_pos.xyz.x + left_eye_pos[12];
+	eye_pos.xyz.y = eye_pos.xyz.y + left_eye_pos[13];
+	eye_pos.xyz.z = eye_pos.xyz.z + left_eye_pos[14];
 
 	//Modify view object directly for VR support
 	if (Viewer_obj != NULL)
@@ -4040,7 +4118,24 @@ camid right_eye_game_render_frame_setup()
 	eye_pos.xyz.y = eye_pos.xyz.y + right_eye_pos[13];
 	eye_pos.xyz.z = eye_pos.xyz.z + right_eye_pos[14];
 
+	//Modify view object directly for VR support
+	if (Viewer_obj != NULL)
+	{
+		Viewer_obj->pos.xyz.x = Viewer_obj->pos.xyz.x;
+		Viewer_obj->pos.xyz.y = Viewer_obj->pos.xyz.y;
+		Viewer_obj->pos.xyz.z = Viewer_obj->pos.xyz.z;
+		Viewer_obj->orient = hmd_orientation1;
+	}
 
+	if (Player_obj != NULL)
+
+	{
+
+		Player_obj->pos.xyz.x = Player_obj->pos.xyz.x;
+		Player_obj->pos.xyz.y = Player_obj->pos.xyz.y;
+		Player_obj->pos.xyz.z = Player_obj->pos.xyz.z;
+		Player_obj->orient = hmd_orientation1;
+	}
 	
 	main_cam->set_position(&eye_pos);
 	main_cam->set_rotation(&hmd_orientation1);
@@ -4844,6 +4939,7 @@ void game_frame(bool paused)
 			//This updates the data from the headset
   			VROBJ->UpdateHMDMatrixPose();
 	    	VROBJ->SetupCameras();
+		//	VROBJ->SetupStereoRenderTargets();
 
 
 			//VR ADDITION: Let's try to get the orientation of the HMD
@@ -4856,9 +4952,10 @@ void game_frame(bool paused)
 			hmd_orientation1.vec.fvec.xyz.x = hmd_pose[2];	 	//m3
 			hmd_orientation1.vec.rvec.xyz.y = hmd_pose[4];		//m4
 			hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
+			hmd_orientation1.vec.fvec.xyz.y = hmd_pose[6];		//m5
 			hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
 
-
+	
 			invert_hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];		//m1
 			invert_hmd_orientation1.vec.uvec.xyz.z = hmd_pose[9];		//m8
 			invert_hmd_orientation1.vec.uvec.xyz.x = hmd_pose[1];		//m2
@@ -4869,24 +4966,30 @@ void game_frame(bool paused)
 			invert_hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
 			camid cid;
 
+			GLint drawFboId = 0, readFboId = 0;
+
 			for (int ii = 1; ii < 3; ii = ii + 1) {
 
 				//Alternate between rendering left and right eye
 				if (ii == 1) {
+	//				glBindFramebuffer(GL_FRAMEBUFFER, LeftFramebufferName);
+
 					cid = left_eye_game_render_frame_setup();
+
+
 				}
 				else {
+//					glBindFramebuffer(GL_FRAMEBUFFER, RightFramebufferName);
+
 					cid = right_eye_game_render_frame_setup();
+
 				}
 				//Render Main Camera (This is the regular camera)
 				//game_render_frame( cid );
 
 				//Render left and right camera
 				game_render_frame(cid);
-
-
-
-
+		
 
 				/*
 				//Cutscene bars
@@ -4967,16 +5070,101 @@ void game_frame(bool paused)
 
 					// maybe render and process the dead popup
 					game_maybe_do_dead_popup(flFrametime);
+				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFboId);
 
 				// If a regular popup is active, don't flip (popup code flips)
 				if (!popup_running_state()) {
 					DEBUG_GET_TIME(flip_time1)
-						game_flip_page_and_time_it();
+					
+		
+					if (ii == 1) {
+						
+						//textureIDLeft = TEXTUREIDCOMMON;
+						/*
+						glGenTextures(1, &textureIDLeft);
+						//textureID = 13;
+						*/
+						glBindTexture(GL_TEXTURE_2D, LeftrenderedTexture);
+						/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						if (firstLeft) {
+				
+							glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, gr_screen.max_w, gr_screen.max_h, 0);
+							firstLeft = false;
+						}
+						else {
+							glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, gr_screen.max_w, gr_screen.max_h);
+						}
+						*/
+					//	glBindFramebuffer(GL_FRAMEBUFFER, LeftFramebufferName);
+						glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight);
+						// Render to our framebuffer
+						//glViewport(0, 0, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+					//	glCopyTexSubImage2D
+						vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)LeftrenderedTexture, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+						vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
+				
+
+					}
+						else {
+						/*
+							//	textureIDRight = TEXTUREIDCOMMON;
+							glGenTextures(1, &textureIDRight);
+							//glTexImage2D(GL_TEXTURE_2D, 0, 3, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, colorBits);
+
+							//textureID = 13;
+							glBindTexture(GL_TEXTURE_2D, textureIDRight);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+							glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+						if (firstRight) {
+						
+							glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, gr_screen.max_w, gr_screen.max_h, 0);
+							firstRight = false;
+						}
+						else {
+							glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, gr_screen.max_w, gr_screen.max_h);
+						}						
+						*/
+						//	glBindFramebuffer(GL_FRAMEBUFFER, RightFramebufferName);
+
+							//glViewport(0, 0, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+							glBindTexture(GL_TEXTURE_2D, RightrenderedTexture);
+
+							glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, VROBJ->m_nRenderWidth, VROBJ->m_nRenderHeight);
+
+						vr::Texture_t rightEyeTexture = { (void*)(uintptr_t)RightrenderedTexture, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
+
+						vr::VRCompositor()->Submit(vr::Eye_Right, &rightEyeTexture);
+						
+					game_flip_page_and_time_it();
+						{
+							// We want to make sure the glFinish waits for the entire present to complete, not just the submission
+							// of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
+							glClearColor(0, 0, 0, 1);
+							glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						}
+
+						glFinish;
+						glFlush;
+						//glDeleteTextures(1, &textureIDLeft);
+						//glDeleteTextures(1, &textureIDRight);
+
+
+					}
+
+
+			
+
 					DEBUG_GET_TIME(flip_time2)
 				}
 				
-				
 			}
+
+			
 			
 		} else {
 			game_show_standalone_framerate();
@@ -8484,7 +8672,8 @@ void game_title_screen_display()
 			// get bitmap's width and height
 			int width, height;
 			bm_get_info(Game_title_bitmap, &width, &height);
-
+			width = VROBJ->m_nRenderWidth;
+			height = VROBJ->m_nRenderHeight;
 			// set the screen scale to the bitmap's dimensions
 			gr_set_screen_scale(width, height);
 

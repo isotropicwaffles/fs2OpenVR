@@ -118,7 +118,6 @@ OpenGLVideoPresenter::OpenGLVideoPresenter(const MovieProperties& props) : _scal
 
 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-
 	GLfloat glVertices[4][4] = {{0}};
 	glVertices[0][0] = (GLfloat)screenX;
 	glVertices[0][1] = (GLfloat)screenY;
