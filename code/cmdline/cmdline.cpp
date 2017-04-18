@@ -1563,7 +1563,7 @@ bool SetCmdlineParams()
 		if (Cmdline_fov > 0.1) {
 			VIEWER_ZOOM_DEFAULT = Cmdline_fov;
 		} else {
-			VIEWER_ZOOM_DEFAULT = Cmdline_fov = 0.75f;
+			VIEWER_ZOOM_DEFAULT = Cmdline_fov = 1.0f;// 0.75f;
 		}
 	}
 

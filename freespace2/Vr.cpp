@@ -2,11 +2,11 @@
 #include "Vr.h"
 
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Initializes openvr and the headset system. Returns true if successful. 
 //          Returns false if it fails
 //-----------------------------------------------------------------------------
+iVr* VROBJ = new iVr();
 
 bool iVr::VR_Init()
 {	
@@ -43,7 +43,7 @@ bool iVr::VR_Init()
 
 	m_strDriver = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_TrackingSystemName_String, NULL);
 	m_strDisplay = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String, NULL);
-
+	current_eye = vr::Eye_Left;
 
 	
 	if ( !vr::VRCompositor() )
@@ -79,8 +79,8 @@ void iVr::VR_Shutdown()
 //-----------------------------------------------------------------------------
 void iVr::SetupCameras()
 {
-	m_mat4ProjectionLeft = GetHMDMatrixProjectionEye(vr::Eye_Left);
-	m_mat4ProjectionRight = GetHMDMatrixProjectionEye(vr::Eye_Right);
+	//m_mat4ProjectionLeft = GetHMDMatrixProjectionEye(vr::Eye_Left);
+	//m_mat4ProjectionRight = GetHMDMatrixProjectionEye(vr::Eye_Right);
 	m_mat4eyePosLeft = GetHMDMatrixPoseEye(vr::Eye_Left);
 	m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right);
 }
@@ -105,22 +105,40 @@ Matrix4 iVr::ConvertSteamVRMatrixToMatrix4(const vr::HmdMatrix34_t &matPose)
 
 
 
+
 //-----------------------------------------------------------------------------
 // Purpose: Gets a Matrix Projection Eye with respect to nEye.
 //-----------------------------------------------------------------------------
-Matrix4 iVr::GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye)
+Matrix4 iVr::GetEyeViewMatrix()
 {
 	if (!m_pHMD)
 		return Matrix4();
 
-	vr::HmdMatrix44_t mat = m_pHMD->GetProjectionMatrix(nEye, m_fNearClip, m_fFarClip);
 
+	if (current_eye == vr::Eye_Left)
+	{
+		return m_mat4eyePosLeft;// *m_mat4HMDPose;
+	}
+	else if (current_eye == vr::Eye_Right)
+	{
+		return  m_mat4eyePosRight;// *  m_mat4HMDPose;
+	}
+
+
+}
+
+
+Matrix4 iVr::GetHMDMatrixProjectionEye()
+{
+	if (!m_pHMD)
+		return Matrix4();
+
+	vr::HmdMatrix44_t mat1 = m_pHMD->GetProjectionMatrix(current_eye, m_fNearClip, m_fFarClip);
 	return Matrix4(
-		mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
-		mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
-		mat.m[0][2], mat.m[1][2], mat.m[2][2], mat.m[3][2],
-		mat.m[0][3], mat.m[1][3], mat.m[2][3], mat.m[3][3]
-	);
+		mat1.m[0][0], mat1.m[1][0], mat1.m[2][0], mat1.m[3][0],
+		mat1.m[0][1], mat1.m[1][1], mat1.m[2][1], mat1.m[3][1],
+		mat1.m[0][2], mat1.m[1][2], mat1.m[2][2], mat1.m[3][2],
+		mat1.m[0][3], mat1.m[1][3], mat1.m[2][3], mat1.m[3][3]	);
 }
 
 
@@ -140,7 +158,7 @@ Matrix4 iVr::GetHMDMatrixPoseEye(vr::Hmd_Eye nEye)
 		matEyeRight.m[0][3], matEyeRight.m[1][3], matEyeRight.m[2][3], 1.0f
 	);
 
-	return matrixObj.invert();
+	return matrixObj;
 }
 
 
@@ -202,6 +220,10 @@ void iVr::UpdateHMDMatrixPose()
 	if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
 	{
 		m_mat4HMDPose = m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd];
+		m_mat4HMDPose[12] = 0;
+		m_mat4HMDPose[13] = 0;
+		m_mat4HMDPose[14] = 0;
+
 		//m_mat4HMDPose.invert();
 	}
 }
@@ -241,6 +263,35 @@ std::string iVr::GetTrackedDeviceString( vr::IVRSystem *pHmd, vr::TrackedDeviceI
 	return sResult;
 }
 
+
+
+//THis functions gets the projection matrix
+Matrix4 iVr::ComposeProjection(float zNear, float zFar)
+{
+
+
+	float fLeft, fRight, fTop, fBottom;
+
+
+
+
+	m_pHMD->GetProjectionRaw(current_eye, &fLeft, &fRight, &fTop, &fBottom);
+
+
+	float idx = 1.0f / (fRight - fLeft);
+	float idy = 1.0f / (fBottom - fTop);
+	float idz = 1.0f / (zFar - zNear);
+	float sx = fRight + fLeft;
+	float sy = fBottom + fTop;
+	Matrix4 p;
+
+	p[0] = 2 * idx; p[1] = 0;     p[2] = sx*idx;    p[3] = 0;
+	p[4] = 0;     p[5] = 2 * idy; p[6] = sy*idy;    p[7] = 0;
+	p[8] = 0;     p[9] = 0;     p[10] = -zFar*idz; p[11] = -zFar*zNear*idz;
+	p[12] = 0;     p[13] = 0;     p[14] = -1.0f;     p[15] = 0;
+	
+	return p;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: This should render the frame

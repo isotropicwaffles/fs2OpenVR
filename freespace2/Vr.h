@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
+#include "..\code\globalincs\pstypes.h"
 
 #ifndef __IVR_H__
 #define __IVR_H__
@@ -23,6 +24,9 @@
 #define _countof(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
+
+
+
 class iVr
 {
 public:
@@ -35,8 +39,11 @@ public:
 	Matrix4 m_mat4ProjectionCenter;
 	Matrix4 m_mat4ProjectionLeft;
 	Matrix4 m_mat4ProjectionRight;
+	Matrix4 m_mat4ProjectionCurrent;
+	matrix orientation;
 	uint32_t m_nRenderWidth;
 	uint32_t m_nRenderHeight;
+	vr::Hmd_Eye current_eye;
 
 	float m_fNearClip;
 	float m_fFarClip;
@@ -70,7 +77,14 @@ public:
 	//-----------------------------------------------------------------------------
 	bool SetupStereoRenderTargets();
 
+	Matrix4 ComposeProjection(float zNear, float zFar);
 
+	//-----------------------------------------------------------------------------
+	// Purpose: Gets a Matrix Projection Eye with respect to nEye.
+	//-----------------------------------------------------------------------------
+	Matrix4 GetHMDMatrixProjectionEye();
+
+	Matrix4 GetEyeViewMatrix();
 
 private: 
 
@@ -104,10 +118,7 @@ private:
 
 
 
-	//-----------------------------------------------------------------------------
-	// Purpose: Gets a Matrix Projection Eye with respect to nEye.
-	//-----------------------------------------------------------------------------
-	Matrix4 GetHMDMatrixProjectionEye(vr::Hmd_Eye nEye);
+
 
 
 	//-----------------------------------------------------------------------------
@@ -128,3 +139,4 @@ private:
 	void iVr::RenderFrame();
 
 };
+

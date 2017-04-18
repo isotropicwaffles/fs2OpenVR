@@ -31,6 +31,7 @@
 #include "particle/particle.h"
 #include "graphics/shadows.h"
 #include "graphics/material.h"
+#include "../freespace2/Vr.h"
 
 extern int GLOWMAP;
 extern int CLOAKMAP;
@@ -42,6 +43,7 @@ extern int HEIGHTMAP;
 extern int G3_user_clip;
 extern vec3d G3_user_clip_normal;
 extern vec3d G3_user_clip_point;
+extern iVr* VROBJ;
 
 extern bool Basemap_override;
 extern bool Envmap_override;
@@ -603,12 +605,43 @@ void gr_opengl_set_projection_matrix(float fov, float aspect, float z_near, floa
 	clip_width = clip_height * aspect;
 
 	GL_last_projection_matrix = GL_projection_matrix;
-
+	VROBJ->m_fNearClip= z_near;
+	VROBJ->m_fFarClip = z_far;
+	Matrix4 temp;
 	if (GL_rendering_to_texture) {
 		opengl_create_perspective_projection_matrix(&GL_projection_matrix, -clip_width, clip_width, clip_height, -clip_height, z_near, z_far);
+		//temp = VROBJ->ComposeProjection(z_near, z_far);
+		temp = VROBJ->GetHMDMatrixProjectionEye();
+
 	} else {
 		opengl_create_perspective_projection_matrix(&GL_projection_matrix, -clip_width, clip_width, -clip_height, clip_height, z_near, z_far);
+		temp = VROBJ->GetHMDMatrixProjectionEye();
+
 	}
+
+	//float idz = 1.0f / (z_far - z_near);
+
+
+	
+	//Overide with the projection matrix done for the vr stuff
+	GL_projection_matrix.a1d[0] = temp[0];
+	GL_projection_matrix.a1d[1] = temp[1];
+	GL_projection_matrix.a1d[2] = temp[2];
+	GL_projection_matrix.a1d[3] = temp[3];
+	GL_projection_matrix.a1d[4] = temp[4];
+	GL_projection_matrix.a1d[5] = temp[5];
+	GL_projection_matrix.a1d[6] = temp[6];
+	GL_projection_matrix.a1d[7] = temp[7];
+	GL_projection_matrix.a1d[8] = temp[8];
+	GL_projection_matrix.a1d[9] = temp[9];
+	GL_projection_matrix.a1d[10] = temp[10];
+	GL_projection_matrix.a1d[11] = temp[11];
+	GL_projection_matrix.a1d[12] = temp[12];
+	GL_projection_matrix.a1d[13] = temp[13];
+	GL_projection_matrix.a1d[14] = temp[14];
+	GL_projection_matrix.a1d[15] = temp[15];
+	
+	
 
 	GL_CHECK_FOR_ERRORS("end of set_projection_matrix()()");
 
@@ -643,7 +676,47 @@ void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 	GL_CHECK_FOR_ERRORS("start of set_view_matrix()");
 
 	opengl_create_view_matrix(&GL_view_matrix, pos, orient);
+	Matrix4 temp = VROBJ->GetEyeViewMatrix();
+	Matrix4 temp2;
 	
+	temp2[0] = GL_view_matrix.a1d[0];
+	temp2[1] = GL_view_matrix.a1d[1];
+	temp2[2] = GL_view_matrix.a1d[2];
+	temp2[3] = GL_view_matrix.a1d[3];
+	temp2[4] = GL_view_matrix.a1d[4];
+	temp2[5] = GL_view_matrix.a1d[5];
+	temp2[6] = GL_view_matrix.a1d[6];
+	temp2[7] = GL_view_matrix.a1d[7];
+	temp2[8] = GL_view_matrix.a1d[8];
+	temp2[9] = GL_view_matrix.a1d[9];
+	temp2[10] = GL_view_matrix.a1d[10];
+	temp2[11] = GL_view_matrix.a1d[11];
+	temp2[12] = GL_view_matrix.a1d[12];
+	temp2[13] = GL_view_matrix.a1d[13];
+	temp2[14] = GL_view_matrix.a1d[14];
+	temp2[15] = GL_view_matrix.a1d[15];
+
+	temp = temp*temp2;
+
+
+	GL_view_matrix.a1d[1] = temp[1];
+	GL_view_matrix.a1d[2] = temp[2];
+	GL_view_matrix.a1d[3] = temp[3];
+	GL_view_matrix.a1d[4] = temp[4];
+	GL_view_matrix.a1d[5] = temp[5];
+	GL_view_matrix.a1d[6] = temp[6];
+	GL_view_matrix.a1d[7] = temp[7];
+	GL_view_matrix.a1d[8] = temp[8];
+	GL_view_matrix.a1d[9] = temp[9];
+	GL_view_matrix.a1d[10] = temp[10];
+	GL_view_matrix.a1d[11] = temp[11];
+	GL_view_matrix.a1d[12] = temp[12];
+	GL_view_matrix.a1d[13] = temp[13];
+	GL_view_matrix.a1d[14] = temp[14];
+	GL_view_matrix.a1d[15] = temp[15];
+
+
+
 	GL_model_matrix_stack.clear();
 	GL_model_view_matrix = GL_view_matrix;
 

@@ -85,6 +85,9 @@
 #include "weapon/swarm.h"
 #include "weapon/weapon.h"
 #include "tracing/Monitor.h"
+#include "../freespace2/Vr.h"
+
+extern iVr* VROBJ;
 
 using namespace Ship;
 
@@ -13038,6 +13041,7 @@ void ship_get_eye( vec3d *eye_pos, matrix *eye_orient, object *obj, bool do_slew
 	if ( shipp->current_viewpoint < 0 || pm->n_view_positions == 0 || shipp->current_viewpoint > pm->n_view_positions) {
 		*eye_pos = obj->pos;
 		*eye_orient = obj->orient;
+		*eye_orient = VROBJ->orientation;
 		return;
 	}
 
@@ -13057,13 +13061,9 @@ void ship_get_eye( vec3d *eye_pos, matrix *eye_orient, object *obj, bool do_slew
 		model_find_world_point( eye_pos, &ep->pnt, pm->id, ep->parent, &obj->orient, from_origin ? &vmd_zero_vector : &obj->pos );
 		*eye_orient = obj->orient;
 	}
+	*eye_orient = VROBJ->orientation;
 
-	//	Modify the orientation based on head orientation.
-	if ( Viewer_obj == obj && do_slew) {
-		// Add the cockpit leaning translation offset
-		vm_vec_add2(eye_pos,&leaning_position);
-		compute_slew_matrix(eye_orient, &Viewer_slew_angles);
-	}
+	
 }
 
 // of attackers to make this decision.

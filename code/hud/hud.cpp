@@ -53,7 +53,10 @@
 #include "starfield/supernova.h"
 #include "weapon/emp.h"
 #include "weapon/weapon.h"
+#include "../freespace2/Vr.h"
 
+
+extern iVr* VROBJ;
 SCP_vector<HudGauge*> default_hud_gauges;
 
 // new values for HUD alpha
@@ -996,6 +999,13 @@ void HudGauge::resetClip()
 		hx = fl2i(HUD_offset_x);
 		hy = fl2i(HUD_offset_y);
 
+
+	
+
+	
+
+	
+
 		gr_resize_screen_pos(&hx, &hy);
 		gr_set_screen_scale(base_w, base_h);
 
@@ -1579,6 +1589,11 @@ void hud_show_asteroid_brackets()
  */
 void hud_render_preprocess(float frametime)
 {
+
+
+
+
+
 	Player->subsys_in_view = -1;
 	hud_target_clear_display_list();
 
@@ -1715,6 +1730,11 @@ void hud_maybe_display_supernova()
  */
 void hud_render_all()
 {
+
+
+
+
+
 	int i;
 
 	hud_render_gauges();
@@ -1789,7 +1809,6 @@ void hud_render_gauges(int cockpit_display_num)
 			GR_DEBUG_SCOPE("Render HUD gauge");
 
 			default_hud_gauges[j]->preprocess();
-
 			default_hud_gauges[j]->onFrame(flFrametime);
 
 			if ( !default_hud_gauges[j]->canRender() ) {
@@ -3634,6 +3653,16 @@ void HUD_set_offsets(object *viewer_obj, int wiggedy_wack, matrix *eye_orient)
 }
 
 /**
+* @offsets
+*/
+void HUD_set_xyoffsets(float x, float y)
+{
+		HUD_offset_x = x;
+		HUD_offset_y = y;	
+}
+
+
+/**
  * @brief Returns the offset between the player's view vector and the forward vector of the ship in pixels (Swifty)
  */
 void HUD_get_nose_coordinates(int *x, int *y)
@@ -3701,6 +3730,7 @@ void HUD_set_clip(int x, int y, int w, int h)
 {
 	int hx = fl2i(HUD_offset_x);
 	int hy = fl2i(HUD_offset_y);
+
 
 	gr_set_clip(hx+x, hy+y, w, h);
 }

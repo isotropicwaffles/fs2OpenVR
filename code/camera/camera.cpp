@@ -12,7 +12,7 @@
 #include "ship/ship.h" //compute_slew_matrix
 
 //*************************IMPORTANT GLOBALS*************************
-float VIEWER_ZOOM_DEFAULT = 0.75f;			//	Default viewer zoom, 0.625 as per multi-lateral agreement on 3/24/97
+float VIEWER_ZOOM_DEFAULT = 1.0f;// 0.75f;			//	Default viewer zoom, 0.625 as per multi-lateral agreement on 3/24/97
 float Sexp_fov = 0.0f;
 warp_camera Warp_camera;
 

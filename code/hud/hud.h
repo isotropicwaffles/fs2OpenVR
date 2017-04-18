@@ -109,6 +109,8 @@ extern float Player_rearm_eta;
 extern int Hud_max_targeting_range;
 
 void HUD_init_colors();
+void HUD_set_xyoffsets(float x, float y);
+
 void HUD_init();
 void hud_close();
 void hud_level_close();

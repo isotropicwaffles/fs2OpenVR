@@ -178,7 +178,7 @@
 
 extern int Om_tracker_flag; // needed for FS2OpenPXO config
 //GLuint TEXTUREIDCOMMON;
-
+extern iVr* VROBJ;
 
 #ifdef WIN32
 // According to AMD and NV, these _should_ force their drivers into high-performance mode
@@ -214,7 +214,7 @@ void multi_spew_pxo_checksums(int max_files, const char *outfile);
 void fs2netd_spew_table_checksums(const char *outfile);
 
 extern bool frame_rate_display;
-iVr* VROBJ = new iVr();
+
 GLuint textureIDLeft;
 GLuint textureIDRight;
 GLuint RightFramebufferName;
@@ -223,7 +223,7 @@ GLuint Leftdepthrenderbuffer;
 GLuint Rightdepthrenderbuffer;
 GLuint LeftrenderedTexture;
 GLuint RightrenderedTexture;
-
+//float HUD_offset_x;
 bool firstLeft = true;
 bool firstRight = true;;
 matrix hmd_orientation1;
@@ -1666,8 +1666,7 @@ void game_init()
 {
 	int s1 __UNUSED, e1 __UNUSED;
 	const char *ptr;
-	char whee[MAX_PATH_LEN];
-	
+	char whee[MAX_PATH_LEN]; 
 	//Initialize VR
 	VROBJ->VR_Init();
 
@@ -3761,9 +3760,9 @@ camid left_eye_game_render_frame_setup()
 
 	//VR ADDTION: Add eye offset from center
 	Matrix4 left_eye_pos = VROBJ->m_mat4eyePosLeft;
-	eye_pos.xyz.x = eye_pos.xyz.x + left_eye_pos[12];
-	eye_pos.xyz.y = eye_pos.xyz.y + left_eye_pos[13];
-	eye_pos.xyz.z = eye_pos.xyz.z + left_eye_pos[14];
+	eye_pos.xyz.x = eye_pos.xyz.x;
+	eye_pos.xyz.y = eye_pos.xyz.y;
+	eye_pos.xyz.z = eye_pos.xyz.z;
 
 	//Modify view object directly for VR support
 	if (Viewer_obj != NULL)
@@ -4114,9 +4113,9 @@ camid right_eye_game_render_frame_setup()
 
 	//VR ADDTION: Add eye offset from center
 	Matrix4 right_eye_pos = VROBJ->m_mat4eyePosRight;
-	eye_pos.xyz.x = eye_pos.xyz.x + right_eye_pos[12];
-	eye_pos.xyz.y = eye_pos.xyz.y + right_eye_pos[13];
-	eye_pos.xyz.z = eye_pos.xyz.z + right_eye_pos[14];
+	eye_pos.xyz.x = eye_pos.xyz.x;
+	eye_pos.xyz.y = eye_pos.xyz.y;
+	eye_pos.xyz.z = eye_pos.xyz.z;
 
 	//Modify view object directly for VR support
 	if (Viewer_obj != NULL)
@@ -4190,14 +4189,14 @@ void game_render_frame( camid cid )
 		eye_no_jitter = eye_orient;
 		if( !(Viewer_mode & VM_FREECAMERA) ) {
 		//	apply_view_shake(&eye_orient);
-		//	cam->set_rotation(&hmd_orientation1);
+			cam->set_rotation(&hmd_orientation1);
 		}
 
 		//Maybe override FOV from SEXP
 		if(Sexp_fov <= 0.0f)
-			g3_set_view_matrix(&eye_pos, &eye_orient, cam->get_fov());
+			g3_set_view_matrix(&eye_pos, &hmd_orientation1, cam->get_fov());
 		else
-			g3_set_view_matrix(&eye_pos, &eye_orient, Sexp_fov);
+			g3_set_view_matrix(&eye_pos, &hmd_orientation1, Sexp_fov);
 	}
 	else
 	{
@@ -4228,13 +4227,13 @@ void game_render_frame( camid cid )
 
 #ifndef DYN_CLIP_DIST
 	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-	gr_set_view_matrix(&Eye_position, &Eye_matrix);
+	gr_set_view_matrix(&Eye_position, &hmd_orientation1);
 #endif
 
 	if ( Game_subspace_effect )	{
 		stars_draw(0,0,0,1,0);
 	} else {
-		stars_draw(1,1,1,0,0);
+		stars_draw(0,1,1,0,1);
 	}
 
 	shadows_render_all(Proj_fov, &Eye_matrix, &Eye_position);
@@ -4244,7 +4243,7 @@ void game_render_frame( camid cid )
 
 	trail_render_all();						// render missilie trails after everything else.
 	particle::render_all();					// render particles after everything else.
-	
+
 #ifdef DYN_CLIP_DIST
 	gr_end_proj_matrix();
 	gr_end_view_matrix();
@@ -4309,7 +4308,7 @@ void game_render_frame( camid cid )
 	}
 
 	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-	gr_set_view_matrix(&Eye_position, &Eye_matrix);
+	gr_set_view_matrix(&Eye_position, &hmd_orientation1);
 
 	// Do the sunspot
 	game_sunspot_process(flFrametime);
@@ -4670,6 +4669,7 @@ void game_render_hud(camid cid)
 
 	if(cid.isValid()) {
 		g3_start_frame(0);		// 0 = turn zbuffering off
+	
 		g3_set_view( cid.getCamera() );
 
 		hud_render_preprocess(flFrametime);
@@ -4943,43 +4943,120 @@ void game_frame(bool paused)
 
 
 			//VR ADDITION: Let's try to get the orientation of the HMD
-			Matrix4 hmd_pose = VROBJ->m_mat4HMDPose;
+			//Matrix4 hmd_pose = VROBJ->m_mat4HMDPose;
+			/*
+			//Matrix3 temp_hmd_rot;
 
-			hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];		//m1
-			hmd_orientation1.vec.uvec.xyz.z = hmd_pose[9];		//m8
-			hmd_orientation1.vec.uvec.xyz.x = hmd_pose[1];		//m2
-			hmd_orientation1.vec.rvec.xyz.z = hmd_pose[8];		//m7
-			hmd_orientation1.vec.fvec.xyz.x = hmd_pose[2];	 	//m3
-			hmd_orientation1.vec.rvec.xyz.y = hmd_pose[4];		//m4
+			//hmd_pose.invert();
+			temp_hmd_rot[0] = -VROBJ->m_mat4HMDPose[0];
+			temp_hmd_rot[1] = -VROBJ->m_mat4HMDPose[1];		//m4
+			temp_hmd_rot[2] = -VROBJ->m_mat4HMDPose[2];		//m7														//m1
+
+			temp_hmd_rot[3] = -VROBJ->m_mat4HMDPose[4];		//m2
+			temp_hmd_rot[4] = -VROBJ->m_mat4HMDPose[5];		//m5
+			temp_hmd_rot[5] = -VROBJ->m_mat4HMDPose[6];		//m8
+
+			temp_hmd_rot[6] = VROBJ->m_mat4HMDPose[8];	 	//m3
+			temp_hmd_rot[7] = VROBJ->m_mat4HMDPose[9];		//m5
+			temp_hmd_rot[8] = VROBJ->m_mat4HMDPose[10];		//m9
+
+			*/
+
+															/*
+			temp_hmd_rot.invert();
+
+			temp_hmd_rot[0] = VROBJ->m_mat4HMDPose[0];
+			temp_hmd_rot[1] = VROBJ->m_mat4HMDPose[4];		//m4
+			temp_hmd_rot[2] = VROBJ->m_mat4HMDPose[8];		//m7														//m1
+
+			temp_hmd_rot[3] = VROBJ->m_mat4HMDPose[1];		//m2
+			temp_hmd_rot[4] = VROBJ->m_mat4HMDPose[5];		//m5
+			temp_hmd_rot[5] = VROBJ->m_mat4HMDPose[9];		//m8
+
+			temp_hmd_rot[6] = VROBJ->m_mat4HMDPose[2];	 	//m3
+			temp_hmd_rot[7] = VROBJ->m_mat4HMDPose[6];		//m5
+			temp_hmd_rot[8] = VROBJ->m_mat4HMDPose[10];		//m9
+			*/
+
+			//hmd_pose.invert();
+			hmd_orientation1.vec.rvec.xyz.x = -VROBJ->m_mat4HMDPose[0];
+			hmd_orientation1.vec.rvec.xyz.y = -VROBJ->m_mat4HMDPose[1];		//m4
+			hmd_orientation1.vec.rvec.xyz.z = -VROBJ->m_mat4HMDPose[2];		//m7													//m1
+
+			hmd_orientation1.vec.uvec.xyz.x = -VROBJ->m_mat4HMDPose[4];		//m2
+			hmd_orientation1.vec.uvec.xyz.y = -VROBJ->m_mat4HMDPose[5];		//m5
+			hmd_orientation1.vec.uvec.xyz.z = -VROBJ->m_mat4HMDPose[6];		//m8
+
+			hmd_orientation1.vec.fvec.xyz.x = VROBJ->m_mat4HMDPose[8];	 	//m3
+			hmd_orientation1.vec.fvec.xyz.y = VROBJ->m_mat4HMDPose[9];		//m5
+			hmd_orientation1.vec.fvec.xyz.z = VROBJ->m_mat4HMDPose[10];		//m9
+
+																	/*
+			hmd_orientation1.vec.rvec.xyz.x = -hmd_pose[0];
+			hmd_orientation1.vec.rvec.xyz.y = -hmd_pose[4];		//m4
+			hmd_orientation1.vec.rvec.xyz.z = -hmd_pose[8];		//m7														//m1
+
+			hmd_orientation1.vec.uvec.xyz.x = -hmd_pose[1];		//m2
+			hmd_orientation1.vec.uvec.xyz.y = -hmd_pose[5];		//m5
+			hmd_orientation1.vec.uvec.xyz.z = -hmd_pose[9];		//m8
+
+			hmd_orientation1.vec.fvec.xyz.x = -hmd_pose[2];	 	//m3
+			hmd_orientation1.vec.fvec.xyz.y = -hmd_pose[6];		//m5
+			hmd_orientation1.vec.fvec.xyz.z = -hmd_pose[10];		//m9
+
+
+			hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];
+			hmd_orientation1.vec.rvec.xyz.y = hmd_pose[1];		//m4
+			hmd_orientation1.vec.rvec.xyz.z = hmd_pose[2];		//m7														//m1
+
+			hmd_orientation1.vec.uvec.xyz.x = hmd_pose[4];		//m2
 			hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
-			hmd_orientation1.vec.fvec.xyz.y = hmd_pose[6];		//m5
-			hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
+			hmd_orientation1.vec.uvec.xyz.z = hmd_pose[6];		//m8
 
+			hmd_orientation1.vec.fvec.xyz.x = hmd_pose[8];	 	//m3
+			hmd_orientation1.vec.fvec.xyz.y = hmd_pose[9];		//m5
+			hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
 	
-			invert_hmd_orientation1.vec.rvec.xyz.x = hmd_pose[0];		//m1
-			invert_hmd_orientation1.vec.uvec.xyz.z = hmd_pose[9];		//m8
-			invert_hmd_orientation1.vec.uvec.xyz.x = hmd_pose[1];		//m2
-			invert_hmd_orientation1.vec.rvec.xyz.z = hmd_pose[8];		//m7
-			invert_hmd_orientation1.vec.fvec.xyz.x = hmd_pose[2];	 	//m3
-			invert_hmd_orientation1.vec.rvec.xyz.y = hmd_pose[4];		//m4
-			invert_hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
-			invert_hmd_orientation1.vec.fvec.xyz.z = hmd_pose[10];		//m9
+			
+			hmd_orientation1.vec.rvec.xyz.x = hmd_pose[8];
+			hmd_orientation1.vec.rvec.xyz.y = hmd_pose[9];		//m4
+			hmd_orientation1.vec.rvec.xyz.z = hmd_pose[10];		//m7														//m1
+
+			hmd_orientation1.vec.uvec.xyz.x = hmd_pose[4];		//m2
+			hmd_orientation1.vec.uvec.xyz.y = hmd_pose[5];		//m5
+			hmd_orientation1.vec.uvec.xyz.z = hmd_pose[6];		//m8
+
+			hmd_orientation1.vec.fvec.xyz.x = hmd_pose[0];	 	//m3
+			hmd_orientation1.vec.fvec.xyz.y = hmd_pose[1];		//m5
+			hmd_orientation1.vec.fvec.xyz.z = hmd_pose[2];		//m9
+			*/
+			 /*
+			invert_hmd_orientation1.vec.rvec.xyz.x = temp_hmd_rot[0];		//m1
+			invert_hmd_orientation1.vec.uvec.xyz.z = temp_hmd_rot[9];		//m8
+			invert_hmd_orientation1.vec.uvec.xyz.x = temp_hmd_rot[1];		//m2
+			invert_hmd_orientation1.vec.rvec.xyz.z = temp_hmd_rot[8];		//m7
+			invert_hmd_orientation1.vec.fvec.xyz.x = temp_hmd_rot[2];	 	//m3
+			invert_hmd_orientation1.vec.rvec.xyz.y = temp_hmd_rot[4];		//m4
+			invert_hmd_orientation1.vec.uvec.xyz.y = temp_hmd_rot[5];		//m5
+			invert_hmd_orientation1.vec.fvec.xyz.z = temp_hmd_rot[10];		//m9
+			*/
 			camid cid;
 
 			GLint drawFboId = 0, readFboId = 0;
 
-			for (int ii = 1; ii < 3; ii = ii + 1) {
+			for (int ii = 2; ii >= 1; ii = ii - 1) {
 
 				//Alternate between rendering left and right eye
 				if (ii == 1) {
 	//				glBindFramebuffer(GL_FRAMEBUFFER, LeftFramebufferName);
-
+					VROBJ->current_eye = vr::Eye_Left;
 					cid = left_eye_game_render_frame_setup();
 
 
 				}
 				else {
 //					glBindFramebuffer(GL_FRAMEBUFFER, RightFramebufferName);
+					VROBJ->current_eye = vr::Eye_Right;
 
 					cid = right_eye_game_render_frame_setup();
 
@@ -5006,12 +5083,27 @@ void game_frame(bool paused)
 					Scripting_didnt_draw_hud = 0;
 				}
 				*/
-				if (Scripting_didnt_draw_hud) {
+				if (true) {
 					GR_DEBUG_SCOPE("Render HUD");
 					
+
+
+
+					if (ii==1) {
+						HUD_offset_x = 60;
+
+					}
+					else
+					{
+						HUD_offset_x = -50;
+
+
+					}
+
+
 					game_render_hud(cid);
 				}
-				HUD_reset_clip();
+				//HUD_reset_clip();
 
 				if ((Game_detail_flags & DETAIL_FLAG_HUD) && (!(Game_mode & GM_MULTIPLAYER) || ((Game_mode & GM_MULTIPLAYER) && !(Net_player->flags & NETINFO_FLAG_OBSERVER)))) {
 					anim_render_all(0, flFrametime);
@@ -5106,7 +5198,15 @@ void game_frame(bool paused)
 						vr::Texture_t leftEyeTexture = { (void*)(uintptr_t)LeftrenderedTexture, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
 						vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture);
 				
+						{
+							// We want to make sure the glFinish waits for the entire present to complete, not just the submission
+							// of the command. So, we do a clear here right here so the glFinish will wait fully for the swap.
+							glClearColor(0, 0, 0, 1);
+							glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						}
 
+						glFinish;
+						glFlush;
 					}
 						else {
 						/*
@@ -5157,6 +5257,27 @@ void game_frame(bool paused)
 					}
 
 
+						game_do_training_checks();
+						asteroid_frame();
+
+						// process lightning (nebula only)
+						nebl_process();
+
+						if (Cmdline_frame_profile) {
+							tracing::frame_profile_process_frame();
+						}
+
+						DEBUG_GET_TIME(total_time2)
+
+#ifndef NDEBUG
+							// Got some timing numbers
+							Timing_total = f2fl(total_time2 - total_time1) * 1000.0f;
+						Timing_clear = f2fl(clear_time2 - clear_time1) * 1000.0f;
+						Timing_render2 = f2fl(render2_time2 - render2_time1) * 1000.0f;
+						Timing_render3 = f2fl(render3_time2 - render3_time1) * 1000.0f;
+						Timing_flip = f2fl(flip_time2 - flip_time1) * 1000.0f;
+#endif
+
 			
 
 					DEBUG_GET_TIME(flip_time2)
@@ -5171,27 +5292,6 @@ void game_frame(bool paused)
 		}
 
 	}
-
-	game_do_training_checks();
-	asteroid_frame();
-
-	// process lightning (nebula only)
-	nebl_process();
-
-	if (Cmdline_frame_profile) {
-		tracing::frame_profile_process_frame();
-	}
-
-	DEBUG_GET_TIME( total_time2 )
-
-#ifndef NDEBUG
-	// Got some timing numbers
-	Timing_total = f2fl( total_time2 - total_time1 ) * 1000.0f;
-	Timing_clear = f2fl( clear_time2 - clear_time1 ) * 1000.0f;
-	Timing_render2 = f2fl( render2_time2- render2_time1 ) * 1000.0f;
-	Timing_render3 = f2fl( render3_time2- render3_time1 ) * 1000.0f;
-	Timing_flip = f2fl( flip_time2 - flip_time1 ) * 1000.0f;
-#endif
 
 }
 

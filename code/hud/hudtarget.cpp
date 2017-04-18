@@ -3515,6 +3515,7 @@ void hud_show_targeting_gauges(float frametime)
 		target_pos = targetp->pos;
 	}
 
+	target_pos.xyz.y = -target_pos.xyz.y;
 	// find the current target vertex
 	//
 	// The 2D screen pos depends on the current viewer position and orientation.

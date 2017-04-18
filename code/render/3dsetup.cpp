@@ -14,7 +14,7 @@
 #include "graphics/tmapper.h"
 #include "lighting/lighting.h"
 #include "render/3dinternal.h"
-
+#include "../freespace2/Vr.h"
 
 matrix		View_matrix;		// The matrix to convert local coordinates to screen
 vec3d		View_position;		// The offset to convert local coordinates to screen
@@ -125,12 +125,19 @@ void g3_end_frame_func(const char *filename, int lineno)
 
 
 void scale_matrix(void);
+extern iVr* VROBJ;
 
 void g3_set_view(camera *cam)
 {
 	vec3d pos;
 	matrix ori;
+
 	cam->get_info(&pos, &ori);
+
+	Matrix4 temp = VROBJ->GetEyeViewMatrix() * VROBJ->m_mat4HMDPose;
+	pos.a1d[0] = pos.a1d[0]+ 10*temp[12];
+	pos.a1d[1] = pos.a1d[1] + 10 * temp[13];
+	pos.a1d[2] = pos.a1d[2] + 10 * temp[14];
 
 	if(Sexp_fov <= 0.0f)
 		g3_set_view_matrix(&pos, &ori, cam->get_fov());
@@ -153,6 +160,11 @@ void g3_set_view_matrix(const vec3d *view_pos, const matrix *view_matrix, float 
 	Proj_fov = 1.39626348f * View_zoom;
 
 	Eye_matrix = View_matrix;
+
+	
+
+
+
 	Eye_position = *view_pos;
 	Eye_fov = zoom;
 
